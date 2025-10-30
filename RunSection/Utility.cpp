@@ -277,17 +277,114 @@ namespace RunSection
 
     arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size)
     {
-        arma::cx_vec x = arma::cx_vec(arma::size(b), arma::fill::zeros);
+        int n_blocks = A.n_rows / block_size; //the total number of blocks in the matrix (including those that are zero)
+        std::vector<arma::sp_cx_mat> A_blocks; 
+        std::vector<arma::cx_vec> B_blocks;
+
+        //number of blocks needed
+        //A is tridigonal, so we only need to store the blocks on the diagonal and the blocks above and below it
+        int TridiagonalBlocks = (n_blocks - 2) * 3 + 4; //3 blocks for the middle rows and 4 to account for the first and last rows (e.g 2x2 - 4 blocks, 3x3 - 7 blocks, 4x4 - 10 blocks, etc...)
+        A_blocks.reserve(TridiagonalBlocks);
+        B_blocks.reserve(n_blocks);
+
+        //Get A and B blocks
+        for (int i = 0; i < n_blocks; i++)
+        {
+            //B block
+            arma::cx_vec B_subblock = b.rows(i * block_size, (i + 1) * block_size - 1);
+            B_blocks.push_back(B_subblock);
+
+            //A blocks
+            //Off-digaonal LEFT
+            if(i > 0)
+            {
+                arma::sp_cx_mat A_subblock_offdiag_left = A.submat(i * block_size, (i-1) * block_size, (i+1) * block_size - 1, i * block_size - 1);
+                A_blocks.push_back(A_subblock_offdiag_left);
+            }
+            //Diagonal block
+            arma::sp_cx_mat A_subblock_diag = A.submat(i * block_size, i * block_size, (i+1) * block_size - 1, (i+1) * block_size - 1);
+            A_blocks.push_back(A_subblock_diag);
+            //Off-diagonal RIGHT
+            if(i < n_blocks -1)
+            {
+                arma::sp_cx_mat A_subblock_offdiag_right = A.submat(i * block_size, (i+1) * block_size, (i+1) * block_size - 1, (i+2) * block_size - 1);
+                A_blocks.push_back(A_subblock_offdiag_right);
+            }
+        }
+
+        //O(n) method so can loop through with a range of n_blocks
+        /*
+        |D_1 U_1 0   0                  ... 0 | |x_1|     |b_1|
+        |L_2 D_2 U_2 0                  ... 0 | |x_2|     |b_2|
+        |0  L_3 D_3 U_3                 ... 0 | |x_3|     |b_3|
+        |...            ...             ...   |  ...       ... 
+        |0            L_n-2 D_n_2 U_n-2   0   | |x_n-2|   |b_n-2|
+        |0        ...    0  L_n-1 D_n-1 U_n-1 | |x_n-1|   |b_n-1|
+        |0        ...         0   L_n   D_n   | |x_n|     |b_n|
+        */
+
+        for (int i = 1; i < n_blocks; i++)
+        {
+            //Get the blocks
+            arma::sp_cx_mat D_prev = A_blocks[(3*(i-1))];
+            arma::sp_cx_mat U_prev = A_blocks[(3*(i-1)) + 1];
+            arma::cx_vec B_prev = B_blocks[i-1];
+
+            arma::sp_cx_mat D = A_blocks[(3*i)];
+            arma::sp_cx_mat L = A_blocks[(3*i) - 1];
+            arma::cx_vec B = B_blocks[i];
+
+            //form augmented matrix (U_prev | B_prev)
+            arma::cx_mat UB_prev = AugmentedMatrix(arma::conv_to<arma::cx_mat>(U_prev), arma::conv_to<arma::cx_mat>(B_prev));
+            arma::sp_mat UB_prev_modified = arma::spsolve(D_prev, UB_prev, "lapack");
+            arma::cx_mat DB = AugmentedMatrix(arma::conv_to<arma::cx_mat>(D), arma::conv_to<arma::cx_mat>(B));
+            DB -= arma::conv_to<arma::cx_mat>(L) * UB_prev_modified;
+            //Update D and B blocks
+            auto [D_new, B_new] = UndoAugmentedMatrix(DB);
+            A_blocks[(3*i)] = arma::sp_cx_mat(D_new);
+            B_blocks[i] = B_new;
+        }
+        
+        //Back substitution
+        std::vector<arma::cx_vec> X_blocks; //Solution blocks - this is reversed 
+        X_blocks.reserve(n_blocks);
+        
+        //Last block
+        arma::cx_vec B_curr = B_blocks[n_blocks -1];
+        arma::sp_cx_mat D_curr = A_blocks[(3*(n_blocks-1))];
+        arma::cx_vec X_last = arma::spsolve(D_curr, B_curr, "lapack");
+        X_blocks.insert(X_blocks.begin(), X_last);
+
+        for (int i = n_blocks-2; i >= 0; i--)
+        {
+            arma::sp_cx_mat D_curr = A_blocks[3*i];
+            arma::sp_cx_mat U_curr = A_blocks[(3*i) + 1];
+            arma::cx_vec B_curr = B_blocks[i];
+            arma::cx_vec X_next = X_blocks[0];
+            arma::cx_vec LHS = B_curr - U_curr * X_next;
+            arma::cx_vec X_curr = arma::spsolve(D_curr, LHS, "lapack");
+            X_blocks.insert(X_blocks.begin(), X_curr);
+        }
+
+        //Reconstruct solution vector
+        arma::cx_vec x(arma::size(b), arma::fill::zeros);
+        for (int i = 0; i < n_blocks; i++)
+        {
+            x.rows(i * block_size, (i +1) * block_size -1) = X_blocks[i];
+        }
+
         return x;
+        
     }
+
 
     bool BlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, arma::cx_vec &x)
     {
         bool inverted = false;
         if(IsBlockTridiagonal(A))
         {
-            //return ThomasBlockSolver(A, b, block_size);
-            std::cout << "Block Thomas Solver not yet implemented, using Block Matrix Inverse instead." << std::endl;
+            return ThomasBlockSolver(A, b, block_size);
+            //std::cout << "Block Thomas Solver not yet implemented, using Block Matrix Inverse instead." << std::endl;
         }
 
         arma::cx_mat A_inv = BlockMatrixInverse(A, block_size, inverted);
@@ -436,6 +533,38 @@ namespace RunSection
         
         bool Invertible = true;
         return Inv;
+    }
+
+    arma::sp_cx_mat AugmentedMatrix(arma::sp_cx_mat &Mat, arma::cx_vec &b)
+    {
+        int rows = Mat.n_rows;
+        int cols = Mat.n_cols + 1;
+
+        arma::sp_cx_mat AugMat(rows, cols);
+        AugMat.submat(0, 0, rows-1, cols-2) = Mat;
+        AugMat.submat(0, cols-1, rows-1, cols-1) = b;
+        return AugMat;
+    }
+
+    arma::cx_mat AugmentedMatrix(arma::cx_mat &Mat, arma::cx_vec &b)
+    {
+        int rows = Mat.n_rows;
+        int cols = Mat.n_cols + 1;
+
+        arma::cx_mat AugMat(rows, cols);
+        AugMat.submat(0, 0, rows-1, cols-2) = Mat;
+        AugMat.submat(0, cols-1, rows-1, cols-1) = b;
+        return AugMat;
+    }
+
+    std::pair<arma::cx_mat, arma::cx_vec> UndoAugmentedMatrix(arma::cx_mat & AugMat)
+    {
+        int rows = AugMat.n_rows;
+        int cols = AugMat.n_cols - 1;
+
+        arma::cx_mat Mat = AugMat.submat(0, 0, rows-1, cols-2);
+        arma::cx_vec b = AugMat.submat(0, cols-1, rows-1, cols-1);
+        return std::make_pair(Mat, b);
     }
 
     bool IsBlockTridiagonal(arma::sp_cx_mat &A, int block_size)

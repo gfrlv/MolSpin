@@ -29,6 +29,7 @@ FWW*
 *.zip
 msd-files/
 *.out
+python/
 
 #ignore vscode workspase files
 MolSpin.code-workspace
