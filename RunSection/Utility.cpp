@@ -415,12 +415,12 @@ namespace RunSection
     bool BlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, arma::cx_vec &x)
     {
         bool inverted = false;
-        if(IsBlockTridiagonal(A,block_size))
-        {
-            x = ThomasBlockSolver(A, b, block_size);
-            return true;
+        //if(IsBlockTridiagonal(A,block_size))
+        //{
+        //    x = ThomasBlockSolver(A, b, block_size);
+        //    return true;
             //implement check for success
-        }
+        //}
 
         arma::cx_mat A_inv = BlockMatrixInverse(A, block_size, inverted);
         if(!inverted)
@@ -441,19 +441,25 @@ namespace RunSection
         A21 = A.submat(block_size, 0, A.n_rows-1, block_size -1);
         A22 = A.submat(block_size, block_size, A.n_rows -1, A.n_cols -1);
 
-        if (A22.n_rows > (unsigned int)block_size)
-        {
-            BlockMatrixInverse(A22, block_size, Invertible);
-        }
-
         //Check if A11 and A22 are invertible
         arma::cx_mat A11_inv, A22_inv; //The inverse of a sparse matrix is usually dense, so we use a dense matrix here
         //Check invertibility wihtin a scope, that way if not invertable we don't keep the failed inverse
         bool A11_invertible, A22_invertible;
         bool SComplementA, SComplementB, BComplements;
         {
-            bool A11_invertible = arma::inv(A11_inv, arma::cx_mat(A11));
-            bool A22_invertible = arma::inv(A22_inv, arma::cx_mat(A22));
+            A11_invertible = arma::inv(A11_inv, arma::cx_mat(A11));
+            //A22_invertible = arma::inv(A22_inv, arma::cx_mat(A22));
+            if (A22.n_rows > (unsigned int)block_size)
+            {
+                bool Invertible2;
+                A22_inv = BlockMatrixInverse(A22, block_size, Invertible2);
+                A22_invertible = Invertible2;
+            }
+            else
+            {
+                A22_invertible = arma::inv(A22_inv, arma::cx_mat(A22));
+            }
+            //std::cout << A22 << std::endl;
 
             if(!A11_invertible)
             {

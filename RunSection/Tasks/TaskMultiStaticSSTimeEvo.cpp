@@ -15,6 +15,8 @@
 #include "ObjectParser.h"
 #include "Utility.h"
 
+#include <chrono>
+
 namespace RunSection
 {
 	// -----------------------------------------------------
@@ -185,10 +187,23 @@ namespace RunSection
 
 		arma::cx_vec result = arma::cx_vec(rho0.n_rows);
 		int block_size = dimensions / systems.size();
+		
+		using std::chrono::high_resolution_clock;
+    	using std::chrono::duration_cast;
+    	using std::chrono::duration;
+    	using std::chrono::milliseconds;
+
+    	auto t1 = high_resolution_clock::now();
 		BlockSolver(L, rho0, block_size, result);
+		auto t2 = high_resolution_clock::now();
 		std::cout << result << std::endl;
+		auto t3 = high_resolution_clock::now();
 		arma::cx_vec result2 = arma::solve(arma::cx_mat(L), rho0);
+		auto t4 = high_resolution_clock::now();
 		std::cout << result2 << std::endl;
+		duration<double, std::milli> T1 = t2-t1;
+		duration<double, std::milli> T2 = t4-t3;
+		std::cout << T1.count() << " , " << T2.count() << std::endl;
 
 		//check difference between the two solvers
 		std::complex<double> diff = 0;

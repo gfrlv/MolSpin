@@ -102,7 +102,7 @@ def ThomasBlockSolver(A : sp.csc_matrix, b : np.ndarray, block_size : int) -> np
                 BlocksToSwap.append([(3*i - 2), -1 if offset == -1 else (3*i - 3)])
             if (3*i + 2) < len(A_blocks):
                 BlocksToSwap.append([(3*i + 2), -1 if offset == 1 else (3*i + 3)])
-            BlocksToSwap.append([(3*i), (3*i + offset)])
+            BlocksToSwap.append([(3*i), (3*i - offset)])
 
             print(BlocksToSwap)
             for Blocks in BlocksToSwap:
@@ -139,7 +139,8 @@ def ThomasBlockSolver(A : sp.csc_matrix, b : np.ndarray, block_size : int) -> np
         A_blocks[3*i] = D_new
         B_blocks[i] = B_new
         #A_blocks[3*(i-1)] = sp.csc_matrix(sp.identity(block_size))
-        A_blocks[(3*(i) - 1)] = sp.csc_matrix(np.zeros((block_size, block_size)))
+        #A_blocks[(3*(i) - 1)] = sp.csc_matrix(np.zeros((block_size, block_size)))
+        A_blocks[(3*i) - 1] = np.zeros((block_size,block_size))
 
     # Back substitution
     X_blocks = []
@@ -208,10 +209,12 @@ if __name__ == '__main__':
 
     #make one of the diagonal blocks a zero
     print(A)
-    A[2*bs:3*bs, 2*bs:3*bs] = sp.csc_matrix(np.zeros((bs, bs)))
+    #A[2*bs:3*bs, 2*bs:3*bs] = np.zeros((bs, bs))
+    #A[0*bs:1*bs, 0*bs:1*bs] = np.zeros((bs,bs),dtype=np.complex128)
+    #print(A[0*bs:1*bs, 0*bs:1*bs])
     print(A)
-    A[1*bs:2*bs, 2*bs:3*bs] = sp.csc_matrix(np.zeros((bs, bs)))
-    A[4*bs:5*bs, 3*bs:4*bs] = sp.csc_matrix(np.zeros((bs, bs)))
+    A[1*bs:2*bs, 2*bs:3*bs] = np.zeros((bs, bs))
+    #A[4*bs:5*bs, 3*bs:4*bs] = np.zeros((bs, bs))
     #make a entire row of blocks zero to test pivoting
     #A[2*bs:3*bs, :] = sp.csc_matrix(np.zeros((bs, N)))
     print(A)

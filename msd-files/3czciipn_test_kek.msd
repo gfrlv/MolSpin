@@ -189,6 +189,11 @@ SpinSystem SINK
   Spin s4 { spin = 1/2; }
   State RAD { spin(s1)=| 1/2>; spin(s2)=| 1/2>; }
   State NR  { spin(s1)=|-1/2>; spin(s2)=|-1/2>; }
+  State Identity {}
+
+  Transition out {source = Identity; rate = 0.01; }
+
+  Interaction Bpp2  { type = zeeman;   spins = s1,s2; field = "0 0 -0.2005"; }
 }
 
 // ---------------------- Settings (sweep & outputs) ----------------------

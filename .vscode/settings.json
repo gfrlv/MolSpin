@@ -89,7 +89,8 @@
         "variant": "cpp",
         "matrixfunctions": "cpp",
         "*.inc": "cpp",
-        "adolcforward": "cpp"
+        "adolcforward": "cpp",
+        "format": "cpp"
     },
     "C_Cpp.errorSquiggles": "Disabled",
     "cmake.configureOnOpen": false,
