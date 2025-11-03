@@ -27,7 +27,7 @@ rp*.msd
 CISS*.msd
 FWW*
 *.zip
-msd-files/
+#msd-files/
 *.out
 #python/
 
