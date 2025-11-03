@@ -13,6 +13,7 @@
 #include "Settings.h"
 #include "State.h"
 #include "ObjectParser.h"
+#include "Utility.h"
 
 namespace RunSection
 {
@@ -181,6 +182,22 @@ namespace RunSection
 			nextDimension += i->second->SpaceDimensions();
 		}
 		this->Data() << std::endl;
+
+		arma::cx_vec result = arma::cx_vec(rho0.n_rows);
+		int block_size = dimensions / systems.size();
+		BlockSolver(L, rho0, block_size, result);
+		std::cout << result << std::endl;
+		arma::cx_vec result2 = arma::solve(arma::cx_mat(L), rho0);
+		std::cout << result2 << std::endl;
+
+		//check difference between the two solvers
+		std::complex<double> diff = 0;
+		for (size_t i = 0; i < result.n_rows; i++)
+		{
+			std::cout << result(i) << " , " << result2(i) << std::endl;
+			diff += std::abs(result(i) - result2(i));
+		}
+		this->Log() << "Difference between solvers: " << diff << std::endl;
 
 		// We need the propagator
 		this->Log() << "Calculating the propagator..." << std::endl;
