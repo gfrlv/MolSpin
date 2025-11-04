@@ -283,47 +283,76 @@ namespace RunSection
 
         //number of blocks needed
         //A is tridigonal, so we only need to store the blocks on the diagonal and the blocks above and below it
-        int TridiagonalBlocks = (n_blocks - 2) * 3 + 4; //3 blocks for the middle rows and 4 to account for the first and last rows (e.g 2x2 - 4 blocks, 3x3 - 7 blocks, 4x4 - 10 blocks, etc...)
+        int TridiagonalBlocks = (n_blocks) * 3; //3 blocks for the middle rows and 4 to account for the first and last rows (e.g 2x2 - 4 blocks, 3x3 - 7 blocks, 4x4 - 10 blocks, etc...)
         A_blocks.reserve(TridiagonalBlocks);
         B_blocks.reserve(n_blocks);
+
+        arma::sp_cx_mat ZeroBlock(block_size,block_size);
 
         //Get A and B blocks
         int count = 0;
         for (int i = 0; i < n_blocks; i++)
         {
+            arma::sp_cx_mat L,D,U = arma::sp_cx_mat(block_size,block_size);
             //B block
             arma::cx_vec B_subblock = b.rows(i * block_size, (i + 1) * block_size - 1);
             B_blocks.insert(B_blocks.begin() + i, B_subblock);
 
-            //A blocks
-            //Off-digaonal LEFT
-            if(i > 0)
+            if(i==0)
             {
-                arma::sp_cx_mat A_subblock_offdiag_left = A.submat(i * block_size, (i-1) * block_size, (i+1) * block_size - 1, i * block_size - 1);
-                A_blocks.insert(A_blocks.begin() + count, A_subblock_offdiag_left);
-                count++;
-                //std::cout << A_subblock_offdiag_left << std::endl;
+                L = ZeroBlock;
             }
-            //Diagonal block
-            arma::sp_cx_mat A_subblock_diag = A.submat(i * block_size, i * block_size, (i+1) * block_size - 1, (i+1) * block_size - 1);
-            A_blocks.insert(A_blocks.begin() + count, A_subblock_diag);
-            count++;
-            //std::cout << A_subblock_diag << std::endl;
-            //Off-diagonal RIGHT
+            else
+            {
+                L = A.submat(i * block_size, (i-1) * block_size, (i+1) * block_size - 1, i * block_size - 1);
+            }
+
+            D = A.submat(i * block_size, i * block_size, (i+1) * block_size - 1, (i+1) * block_size - 1);
+
             if(i < n_blocks -1)
             {
-                arma::sp_cx_mat A_subblock_offdiag_right = A.submat(i * block_size, (i+1) * block_size, (i+1) * block_size - 1, (i+2) * block_size - 1);
-                A_blocks.insert(A_blocks.begin() + count, A_subblock_offdiag_right);
-                count++;
-                //std::cout << A_subblock_offdiag_right << std::endl;
+                U = A.submat(i * block_size, (i+1) * block_size, (i+1) * block_size - 1, (i+2) * block_size - 1);
             }
+            else
+            {
+                U = ZeroBlock;
+            }
+
+            A_blocks.insert(A_blocks.begin() + count + 0, L);
+            A_blocks.insert(A_blocks.begin() + count + 1, D);
+            A_blocks.insert(A_blocks.begin() + count + 2, U);
+            count = count + 3;
+
+
+            //A blocks
+            //Off-digaonal LEFT
+            //if(i > 0)
+            //{
+            //    arma::sp_cx_mat A_subblock_offdiag_left = A.submat(i * block_size, (i-1) * block_size, (i+1) * block_size - 1, i * block_size - 1);
+            //    A_blocks.insert(A_blocks.begin() + count, A_subblock_offdiag_left);
+            //    count++;
+            //    //std::cout << A_subblock_offdiag_left << std::endl;
+            //}
+            ////Diagonal block
+            //arma::sp_cx_mat A_subblock_diag = A.submat(i * block_size, i * block_size, (i+1) * block_size - 1, (i+1) * block_size - 1);
+            //A_blocks.insert(A_blocks.begin() + count, A_subblock_diag);
+            //count++;
+            ////std::cout << A_subblock_diag << std::endl;
+            ////Off-diagonal RIGHT
+            //if(i < n_blocks -1)
+            //{
+            //    arma::sp_cx_mat A_subblock_offdiag_right = A.submat(i * block_size, (i+1) * block_size, (i+1) * block_size - 1, (i+2) * block_size - 1);
+            //    A_blocks.insert(A_blocks.begin() + count, A_subblock_offdiag_right);
+            //    count++;
+            //    //std::cout << A_subblock_offdiag_right << std::endl;
+            //}
         }
 
-        for (int i = 0; i < TridiagonalBlocks; i++)
-        {
-            std::cout << "A block " << i << ":" << std::endl;
-            std::cout << A_blocks[i] << std::endl;
-        }
+        //for (int i = 0; i < TridiagonalBlocks; i++)
+        //{
+        //    std::cout << "A block " << i << ":" << std::endl;
+        //    std::cout << A_blocks[i] << std::endl;
+        //}
 
         //O(n) method so can loop through with a range of n_blocks
         /*
@@ -338,66 +367,57 @@ namespace RunSection
 
         for (int i = 1; i < n_blocks; i++)
         {
+            int PrevIndex = 3*(i-1);
+            int CurrIndex = 3*i;
             //Get the blocks
-            arma::sp_cx_mat D_prev = A_blocks[(3*(i-1))];
-            arma::sp_cx_mat U_prev = A_blocks[(3*(i-1)) + 1];
+            arma::sp_cx_mat D_prev = A_blocks[PrevIndex+1];
+            arma::sp_cx_mat U_prev = A_blocks[PrevIndex+2];
             arma::cx_vec B_prev = B_blocks[i-1];
 
-            arma::sp_cx_mat D = A_blocks[(3*i)];
-            arma::sp_cx_mat L = A_blocks[(3*i) - 1];
+            arma::sp_cx_mat D = A_blocks[CurrIndex+1];
+            arma::cx_mat L = arma::cx_mat(A_blocks[CurrIndex]);
             arma::cx_vec B = B_blocks[i];
 
             //form augmented matrix (U_prev | B_prev)
             arma::cx_mat UB_prev = AugmentedMatrix(arma::conv_to<arma::cx_mat>::from(U_prev), B_prev);
-            arma::cx_mat UB_prev_modified = arma::spsolve(D_prev, UB_prev, "lapack");
-            auto [U_old, B_old] = UndoAugmentedMatrix(UB_prev_modified);
+            arma::cx_mat UB_prev_modified = arma::solve(arma::cx_mat(D_prev), UB_prev);
             
             //A_blocks[(3*(i-1)) + 1] = arma::sp_cx_mat(U_old);
             //B_blocks[i-1] = B_old;
 
-            std::cout << arma::sp_cx_mat(UB_prev_modified) << std::endl;
             arma::cx_mat DB = AugmentedMatrix(arma::conv_to<arma::cx_mat>::from(D), B);
-            std::cout << arma::sp_cx_mat(B) << std::endl;
-            auto RHS = L * UB_prev_modified;
-            std::cout << arma::sp_cx_mat(RHS) << std::endl;
+            arma::cx_mat RHS = L * UB_prev_modified;
             DB = DB - RHS;
             //Update D and B blocks
             auto [D_new, B_new] = UndoAugmentedMatrix(DB);
-            std::cout << arma::sp_cx_mat(D_new - D) << std::endl;
-            A_blocks[(3*i)] = arma::sp_cx_mat(D_new);
+            A_blocks[CurrIndex+1] = arma::sp_cx_mat(D_new);
             B_blocks[i] = B_new;
 
-            A_blocks[(3*i) -1] = arma::sp_cx_mat(arma::cx_mat(L.n_rows, L.n_cols, arma::fill::zeros));
-            //A_blocks[(3*(i-1))].eye();
         }
         
         //Back substitution
         std::vector<arma::cx_vec> X_blocks; //Solution blocks - this is reversed 
-        
-        //Last block
-        arma::cx_vec B_curr = B_blocks[n_blocks -1];
-        arma::sp_cx_mat D_curr = A_blocks[(3*(n_blocks-1))];
-        std::cout << D_curr << std::endl;
-        std::cout << arma::sp_cx_mat(B_curr) << std::endl;
-        arma::cx_vec X_last = arma::spsolve(D_curr, B_curr, "lapack");
-        std::cout << arma::sp_cx_mat(X_last) << std::endl;
-        X_blocks.insert(X_blocks.begin(), X_last);
 
-        for (int i = n_blocks-2; i >= 0; i--)
+
+        for (int i = n_blocks-1; i >= 0; i--)
         {
-            arma::sp_cx_mat D_curr = A_blocks[3*i];
-            arma::sp_cx_mat U_curr = A_blocks[(3*i) + 1];
+            int index = 3*i;
+            arma::cx_mat D_curr = arma::cx_mat(A_blocks[index+1]);
             arma::cx_vec B_curr = B_blocks[i];
-            arma::cx_vec X_next = X_blocks[0];
             
-            std::cout << D_curr << std::endl;
-            std::cout << U_curr << std::endl;
-            std::cout << arma::sp_cx_mat(B_curr) << std::endl;
-            std::cout << arma::sp_cx_mat(X_next) << std::endl;
-
-            arma::cx_vec LHS = B_curr - U_curr * X_next;
-            arma::cx_vec X_curr = arma::spsolve(D_curr, LHS, "lapack");
-            X_blocks.insert(X_blocks.begin(), X_curr);
+            if (i == (n_blocks-1))
+            {
+                arma::cx_vec X_last = arma::solve(D_curr, B_curr);
+                X_blocks.insert(X_blocks.begin(), X_last);
+            }
+            else
+            {
+                arma::sp_cx_mat U_curr = A_blocks[index + 2];
+                arma::cx_vec X_next = X_blocks[0];
+                arma::cx_vec LHS = B_curr - U_curr * X_next;
+                arma::cx_vec X_last = arma::solve(D_curr, LHS);
+                X_blocks.insert(X_blocks.begin(), X_next);
+            }
         }
 
         //Reconstruct solution vector
@@ -415,12 +435,11 @@ namespace RunSection
     bool BlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, arma::cx_vec &x)
     {
         bool inverted = false;
-        //if(IsBlockTridiagonal(A,block_size))
-        //{
-        //    x = ThomasBlockSolver(A, b, block_size);
-        //    return true;
-            //implement check for success
-        //}
+        if(IsBlockTridiagonal(A,block_size))
+        {
+            x = ThomasBlockSolver(A, b, block_size);
+            return true;
+        }
 
         arma::cx_mat A_inv = BlockMatrixInverse(A, block_size, inverted);
         if(!inverted)
@@ -447,7 +466,9 @@ namespace RunSection
         bool A11_invertible, A22_invertible;
         bool SComplementA, SComplementB, BComplements;
         {
-            A11_invertible = arma::inv(A11_inv, arma::cx_mat(A11));
+            //A11_invertible = arma::inv(A11_inv, arma::cx_mat(A11));
+            arma::cx_mat id(A11.n_rows,A11.n_cols,arma::fill::eye);
+            A11_invertible = arma::solve(A11_inv,arma::cx_mat(A11),id);
             //A22_invertible = arma::inv(A22_inv, arma::cx_mat(A22));
             if (A22.n_rows > (unsigned int)block_size)
             {
@@ -457,7 +478,8 @@ namespace RunSection
             }
             else
             {
-                A22_invertible = arma::inv(A22_inv, arma::cx_mat(A22));
+                arma::cx_mat id(A11.n_rows,A11.n_cols,arma::fill::eye);
+                A22_invertible = arma::solve(A22_inv,arma::cx_mat(A22),id);
             }
             //std::cout << A22 << std::endl;
 
@@ -471,8 +493,8 @@ namespace RunSection
             }
         }
 
-        SComplementA = A11_invertible && !A22_invertible;
-        SComplementB = !A11_invertible && A22_invertible;
+        SComplementA = A11_invertible;// && !A22_invertible;
+        SComplementB = A22_invertible;
         BComplements = A11_invertible && A22_invertible;
         Invertible = true;
 
@@ -500,7 +522,8 @@ namespace RunSection
     {
         arma::cx_mat S = A22 - A21 * A11_inv * A12;
         arma::cx_mat S_inv;
-        bool S_invertible = arma::inv(S_inv, S);
+        arma::cx_mat id(A12.n_rows,A12.n_cols,arma::fill::eye);
+        bool S_invertible  = arma::solve(S_inv,S,id);
         if(!S_invertible)
         {
             Invertible = false;
@@ -525,8 +548,9 @@ namespace RunSection
     arma::cx_mat SchurComplementB(arma::sp_cx_mat &A11, arma::sp_cx_mat &A12, arma::sp_cx_mat &A21, arma::cx_mat &A22_inv, bool &invertible)
     {
         arma::cx_mat S = A11 - A12 * A22_inv * A21;
+        arma::cx_mat id(A11.n_rows,A11.n_cols,arma::fill::eye);
         arma::cx_mat S_inv;
-        bool S_invertible = arma::inv(S_inv, S);
+        bool S_invertible  = arma::solve(S_inv,S,id);
         if(!S_invertible)
         {
             invertible = false;
@@ -553,8 +577,9 @@ namespace RunSection
         arma::cx_mat S1 = A11 - A12 * A22_inv * A21;
         arma::cx_mat S2 = A22 - A21 * A11_inv * A12;
         arma::cx_mat S1_inv, S2_inv;
-        bool S1_invertible = arma::inv(S1_inv, S1);
-        bool S2_invertible = arma::inv(S2_inv, S2);
+        arma::cx_mat id(A11.n_rows,A11.n_cols,arma::fill::eye);
+        bool S1_invertible  = arma::solve(S1_inv,S1,id);
+        bool S2_invertible  = arma::solve(S2_inv,S2,id);
         if(!S1_invertible || !S2_invertible)
         {
             invertible = false;
@@ -609,9 +634,6 @@ namespace RunSection
 
         arma::cx_mat Mat = AugMat.submat(0, 0, rows-1, cols-2);
         arma::cx_vec b = AugMat.submat(0, cols-1, rows-1, cols-1);
-        std::cout << arma::sp_cx_mat(AugMat) << std::endl;
-        std::cout << arma::sp_cx_mat(Mat) << std::endl;
-        std::cout << arma::sp_cx_mat(b) << std::endl;
         return std::make_pair(Mat, b);
     }
 
