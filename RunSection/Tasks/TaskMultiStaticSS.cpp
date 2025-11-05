@@ -1,37 +1,40 @@
 /////////////////////////////////////////////////////////////////////////
-// TaskMultiStaticSSTimeEvo implementation (RunSection module)
+// TaskMultiStaticSSimplementation (RunSection module)
 
 // -- Multi-system version: Allows transitions between SpinSystems --
+// -- When applicable uses a Tridagonal Block Solver instead of the Armadillo solver --
 //
 // Molecular Spin Dynamics Software - developed by Claus Nielsen and Luca Gerhards.
 // (c) 2025 Quantum Biology and Computational Physics Group.
 // See LICENSE.txt for license information.
 /////////////////////////////////////////////////////////////////////////
 #include <iostream>
-#include "TaskMultiStaticSSTimeEvo.h"
+#include "TaskMultiStaticSS.h"
 #include "Transition.h"
 #include "Settings.h"
 #include "State.h"
 #include "ObjectParser.h"
 #include "Utility.h"
 
+#include <chrono>
+
 namespace RunSection
 {
 	// -----------------------------------------------------
-	// TaskMultiStaticSSTimeEvo Constructors and Destructor
+	// TaskMultiStaticSS Constructors and Destructor
 	// -----------------------------------------------------
-	TaskMultiStaticSSTimeEvo::TaskMultiStaticSSTimeEvo(const MSDParser::ObjectParser &_parser, const RunSection &_runsection) : BasicTask(_parser, _runsection), timestep(1.0), totaltime(1.0e+4),
+	TaskMultiStaticSS::TaskMultiStaticSS(const MSDParser::ObjectParser &_parser, const RunSection &_runsection) : BasicTask(_parser, _runsection), timestep(1.0), totaltime(1.0e+4),
 																																reactionOperators(SpinAPI::ReactionOperatorType::Haberkorn)
 	{
 	}
 
-	TaskMultiStaticSSTimeEvo::~TaskMultiStaticSSTimeEvo()
+	TaskMultiStaticSS::~TaskMultiStaticSS()
 	{
 	}
 	// -----------------------------------------------------
-	// TaskMultiStaticSSTimeEvo protected methods
+	// TaskMultiStaticSS protected methods
 	// -----------------------------------------------------
-	bool TaskMultiStaticSSTimeEvo::RunLocal()
+	bool TaskMultiStaticSS::RunLocal()
 	{
 		this->Log() << "Running method StaticSS-MultiSystem." << std::endl;
 
@@ -45,6 +48,8 @@ namespace RunSection
 		auto systems = this->SpinSystems();
 		std::vector<std::pair<std::shared_ptr<SpinAPI::SpinSystem>, std::shared_ptr<SpinAPI::SpinSpace>>> spaces;
 		unsigned int dimensions = 0;
+		unsigned int DimensionSize = 0;
+		bool SameDimension = true;
 		for (auto i = systems.cbegin(); i != systems.cend(); i++)
 		{
 			auto space = std::make_shared<SpinAPI::SpinSpace>(*(*i));
@@ -54,6 +59,14 @@ namespace RunSection
 			space->SetReactionOperatorType(this->reactionOperators);
 			int Dimension = space->SpaceDimensions();
 			dimensions += Dimension;
+			if (Dimension != DimensionSize && DimensionSize != 0)
+			{
+				SameDimension = false;
+			}
+			else
+			{
+				DimensionSize = Dimension;
+			}
 
 			// Make sure to save the newly created spin space
 			spaces.push_back(std::pair<std::shared_ptr<SpinAPI::SpinSystem>, std::shared_ptr<SpinAPI::SpinSpace>>(*i, space));
@@ -65,9 +78,21 @@ namespace RunSection
 		unsigned int nextDimension = 0; // Keeps track of the dimension where the next spin space starts
 
 		// Loop through the systems again to fill this matrix and vector
+		std::vector<arma::sp_cx_mat> Blocks;
+		bool BlockCache = false;
+		if(systems.size() > 2 && SameDimension) //Testing has showed that for less than 3 spin systems the BlockTridiagonal method is slower than the standard armadillo solver
+		{
+			int TriDiagonalBlocks = 3 * systems.size();
+			Blocks.reserve(TriDiagonalBlocks);
+			arma::sp_cx_mat ZeroMatrix(DimensionSize,DimensionSize);
+			Blocks.insert(Blocks.begin(),ZeroMatrix);
+			BlockCache = true;
+
+		}
+		int space = 0;
 		for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
 		{
-			//If SpinSpace is made up of multiple SubSystems, this get's handled seperately rejoining when evaluating the creation operators for linking SpinSpaces.
+
 			// Make sure we have an initial state
 			auto initial_states = i->first->InitialState();
 			arma::cx_mat rho0HS;
@@ -112,7 +137,6 @@ namespace RunSection
 				return false;
 			}
 			L.submat(nextDimension, nextDimension, nextDimension + i->second->SpaceDimensions() - 1, nextDimension + i->second->SpaceDimensions() - 1) = arma::cx_double(0.0, -1.0) * H;
-			Blocks
 
 			// Then get the reaction operators
 			arma::sp_cx_mat K;
@@ -123,6 +147,12 @@ namespace RunSection
 			}
 
 			L.submat(nextDimension, nextDimension, nextDimension + i->second->SpaceDimensions() - 1, nextDimension + i->second->SpaceDimensions() - 1) -= K;
+
+			if(BlockCache)
+			{
+				arma::sp_cx_mat TempMat = arma::cx_double(0.0, -1.0) * (H + K);
+				Blocks.insert(Blocks.begin() + (3*spaces) * 1, TempMat);
+			}
 
 			// Obtain the creation operators - note that we need to loop through the other SpinSystems again to find transitions leading into the current SpinSystem
 			unsigned int nextCDimension = 0; // Similar to nextDimension, but to keep track of first dimension for this other SpinSystem
@@ -148,7 +178,21 @@ namespace RunSection
 							// Put it into the total Liouvillian:
 							//  - The row should be that of the current spin space (the target space)
 							//  - The column should be that of the source spin space (the spin system containing the Transition object)
+
 							L.submat(nextDimension, nextCDimension, nextDimension + i->second->SpaceDimensions() - 1, nextCDimension + j->second->SpaceDimensions() - 1) += C * (*t)->Rate();
+							
+							if(!SameDimension)
+								continue;
+							if(!BlockCache)
+								continue;
+							if(std::abs(nextCDimension % DimensionSize - nextDimension % DimensionSize) > 1)
+								BlockCache = false;
+								continue;
+
+							int col = nextCDimension % DimensionSize;
+							int row = spaces;
+							int BlockIndex = (3*row) + 1 + (row-col);
+							Blocks.insert(Blocks.begin() * BlockIndex)							
 						}
 					}
 				}
@@ -186,6 +230,12 @@ namespace RunSection
 		this->Data() << std::endl;
 
 		arma::cx_vec result = arma::cx_vec(rho0.n_rows);
+		if(BlockCache)
+		{
+			int BlockSize = arma::cx_vec(rho0.n_rows);
+			ThomasBlockSolver(L,rho0,BlockSize,Blocks);
+		}
+
 		//int block_size = dimensions / systems.size();
 		//
 		//using std::chrono::high_resolution_clock;
@@ -215,33 +265,24 @@ namespace RunSection
 		//this->Log() << "Difference between solvers: " << diff << std::endl;
 
 		// We need the propagator
-		//this->Log() << "Calculating the propagator..." << std::endl;
-		//arma::cx_mat P = arma::expmat(arma::conv_to<arma::cx_mat>::from(L) * this->timestep);
+		this->Log() << "Calculating the propagator..." << std::endl;
+		arma::cx_mat P = arma::expmat(arma::conv_to<arma::cx_mat>::from(L) * this->timestep);
 
 		// Perform the calculation
 		this->Log() << "Ready to perform calculation." << std::endl;
-		double CurrentTime = 0.0;
-		double InitialTimeStep = this->timestep;
-		double MinTimeStep, MaxTimeStep = 0.0;
-		if(!this->Properties()->Get("minimumtimestep", MinTimeStep) and !this->Properties()->Get("minimum timestep", MinTimeStep))
+		unsigned int steps = static_cast<unsigned int>(std::abs(this->totaltime / this->timestep));
+		for (unsigned int n = 1; n <= steps; n++)
 		{
-			MinTimeStep = InitialTimeStep * 1e-3;
-		}
-		if(!this->Properties()->Get("maximumtimestep", MaxTimeStep) and !this->Properties()->Get("maximum timestep", MaxTimeStep))
-		{
-			MaxTimeStep = InitialTimeStep * 1e4;
-		}
-		
-		this->Log() << "Starting time evolution with timestep: " << this->timestep << ", total time: " << this->totaltime << ", minimum timestep: " << MinTimeStep << ", maximum timestep: " << MaxTimeStep << std::endl;
-		while (CurrentTime <= this->totaltime)
-		{
+			// Write first part of the data output
 			this->Data() << this->RunSettings()->CurrentStep() << " ";
-			CurrentTime += this->timestep;
-			this->Data() << CurrentTime << " ";
+			this->Data() << (static_cast<double>(n) * this->timestep) << " ";
 			this->WriteStandardOutput(this->Data());
-			
-			// Propagate
-			this->timestep = RungeKutta45Armadillo(L, rho0, rho0, this->timestep, ComputeRhoDot, {1e-7,1e-6}, MinTimeStep, MaxTimeStep);
+
+			// Propagate (use special scope to be able to dispose of the temporary vector asap)
+			{
+				arma::cx_vec tmp = P * rho0;
+				rho0 = tmp;
+			}
 
 			// Retrieve the resulting density matrix for each spin system and output the results
 			nextDimension = 0;
@@ -263,57 +304,18 @@ namespace RunSection
 				// Move on to next spin space
 				nextDimension += i->second->SpaceDimensions();
 			}
+
 			// Terminate the line in the data file after iteration through all spin systems
 			this->Data() << std::endl;
 		}
 
-		//Pre RK45 method
-		//unsigned int steps = static_cast<unsigned int>(std::abs(this->totaltime / this->timestep));
-		//for (unsigned int n = 1; n <= steps; n++)
-		//{
-		//	// Write first part of the data output
-		//	this->Data() << this->RunSettings()->CurrentStep() << " ";
-		//	this->Data() << (static_cast<double>(n) * this->timestep) << " ";
-		//	this->WriteStandardOutput(this->Data());
-//
-		//	// Propagate (use special scope to be able to dispose of the temporary vector asap)
-		//	{
-		//		arma::cx_vec tmp = P * rho0;
-		//		rho0 = tmp;
-		//	}
-//
-		//	// Retrieve the resulting density matrix for each spin system and output the results
-		//	nextDimension = 0;
-		//	for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
-		//	{
-		//		// Get the superspace result vector and convert it back to the native Hilbert space
-		//		arma::cx_mat rho_result;
-		//		arma::cx_vec rho_result_vec;
-		//		rho_result_vec = rho0.rows(nextDimension, nextDimension + i->second->SpaceDimensions() - 1);
-		//		if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
-		//		{
-		//			this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
-		//			return false;
-		//		}
-//
-		//		// Get the results
-		//		this->GatherResults(rho_result, *(i->first), *(i->second));
-//
-		//		// Move on to next spin space
-		//		nextDimension += i->second->SpaceDimensions();
-		//	}
-//
-		//	// Terminate the line in the data file after iteration through all spin systems
-		//	this->Data() << std::endl;
-		//}
-//
-		//this->Log() << "Done with calculation." << std::endl;
+		this->Log() << "Done with calculation." << std::endl;
 
 		return true;
 	}
 
 	// Gathers and outputs the results from a given time-integrated density operator
-	void TaskMultiStaticSSTimeEvo::GatherResults(const arma::cx_mat &_rho, const SpinAPI::SpinSystem &_system, const SpinAPI::SpinSpace &_space)
+	void TaskMultiStaticSS::GatherResults(const arma::cx_mat &_rho, const SpinAPI::SpinSystem &_system, const SpinAPI::SpinSpace &_space)
 	{
 		// Loop through all states
 		arma::cx_mat P;
@@ -331,17 +333,8 @@ namespace RunSection
 		}
 	}
 
-	//Right hand side of the master equation for use with Runge Kutta
-    arma::cx_vec TaskMultiStaticSSTimeEvo::ComputeRhoDot(double t, arma::sp_cx_mat &L, arma::cx_vec &K, arma::cx_vec RhoNaught)
-    {
-        arma::cx_vec ReturnVec(L.n_rows);
-		RhoNaught = RhoNaught + K;
-		ReturnVec = L * RhoNaught;
-		return ReturnVec;
-    }
-
-    // Writes the header of the data file (but can also be passed to other streams)
-	void TaskMultiStaticSSTimeEvo::WriteHeader(std::ostream &_stream)
+	// Writes the header of the data file (but can also be passed to other streams)
+	void TaskMultiStaticSS::WriteHeader(std::ostream &_stream)
 	{
 		_stream << "Step ";
 		_stream << "Time(ns) ";
@@ -360,7 +353,7 @@ namespace RunSection
 	}
 
 	// Validation of the required input
-	bool TaskMultiStaticSSTimeEvo::Validate()
+	bool TaskMultiStaticSS::Validate()
 	{
 		double inputTimestep = 0.0;
 		double inputTotaltime = 0.0;

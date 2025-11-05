@@ -1,4 +1,4 @@
-SpinSystem RPSystem
+SpinSystem RPC
 {
 	Spin electron1
 	{
@@ -20,20 +20,20 @@ SpinSystem RPSystem
 		type = nucleus;
 		tensor = isotropic("1.0");
 	}
-	//
-	//Spin nucleus2
-	//{
-	//	spin = 1/2;
-	//	type = nucleus;
-	//	tensor = anisotropic("0.5 0.5 0");
-	//}
-	//
-	//Spin nucleus3
-	//{
-	//	spin = 1/2;
-	//	type = nucleus;
-	//	tensor = anisotropic("0.0 0.5 0.3");
-	//}
+	
+	Spin nucleus2
+	{
+		spin = 1;
+		type = nucleus;
+		tensor = anisotropic("0.5 0.5 0");
+	}
+	
+	Spin nucleus3
+	{
+		spin = 1;
+		type = nucleus;
+		tensor = anisotropic("0.0 0.5 0.3");
+	}
 
 	Interaction Hyperfine1
  	{

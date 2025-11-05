@@ -21,19 +21,18 @@ SpinSystem RPSystem
 		tensor = isotropic("1.0");
 	}
 
-	//Spin nucleus2
-	//{
-	//	spin = 1/2;
-	//	type = nucleus;
-	//	tensor = anisotropic("0.5 0.5 0");
-	//}
-
-	//Spin nucleus3
-	//{
-	//	spin = 1/2;
-	//	type = nucleus;
-	//	tensor = anisotropic("0.0 0.5 0.3");
-	//}
+	Spin nucleus2
+	{
+		spin = 1;
+		type = nucleus;
+		tensor = anisotropic("0.5 0.5 0");
+	
+	Spin nucleus3
+	{
+		spin = 1;
+		type = nucleus;
+		tensor = anisotropic("0.0 0.5 0.3");
+	}
 
 	Interaction Hyperfine1
  	{
@@ -151,10 +150,6 @@ Run
 		type = MultiRadicalPairSS-TimeEvolution;
 		logfile = "logfile.log";
 		datafile = "result.dat";
-		subsystems = 2;
-		subsystemnames = "RP1", "RP2";
-		RP1 = electron1, electron2, nucleus1;//, nucleus2;
-		RP2 = electron1, electron2, nucleus1;//, nucleus3;
 	}
 }
 

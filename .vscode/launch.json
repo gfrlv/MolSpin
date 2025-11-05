@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/molspin",
+            "args": [
+                //"${workspaceFolder}/msd-files/CISS-HoreLau/CISS-HoreLau-10.msd"
+                //"${workspaceFolder}/FWW_3xH_CISS90_VarKr_TimeEvo.msd"
+                //"${workspaceFolder}/msd-files/3czciipn_test_kek.msd"
+                "${workspaceFolder}/msd-files/MultiStaticRP.msd"
+
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "make"
+        }
+    ]
+}

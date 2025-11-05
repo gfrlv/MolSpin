@@ -33,6 +33,44 @@ namespace RunSection
     ///     @return New time step (double)
     double RungeKutta45Armadillo(arma::sp_cx_mat &, arma::cx_vec &, arma::cx_vec &, double, RungeKuttaFuncArma, std::pair<double, double>, double MinTimeStep = 1e-6, double MaxTimeStep = 1e6, double time = 0);
 
+#pragma region BlockMatrixInversionSolvers
+    //With these solvers there is the potential for a large amount of matrix fill-in during the solution process.
+    //Block thomas has less fill in for larger systems with a block tridiagonal structure, than a general block solver.
+    
+    /// The thomas algorithm for solving Ax = b where A is a block tridiagonal matrix
+    /// This algorithm assumes that A is made up of square blocks of size block_size x block_size
+    /// And will use a conventional solver on the blocks 
+    /// @param A The block tridiagonal matrix
+    /// @param b The right hand side vector
+    /// @param block_size The size of the blocks in the block tridiagonal matrix
+    /// @return The solution vector x
+    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, std::vector<arma::sp_cx_mat>CachedBlocks = {});
+
+    /// If the matrix is not tridiaognal a traditional block solver can be used.
+    /// This function checks if the matrix is block tridiagonal and if so uses the thomas algorithm.
+    /// A block solver for solving Ax = b where A is a block matrix.
+    /// This algorithm assumes that A is made up of square blocks of size block_size x block
+    /// and will recursively call itself on the blocks getting the blocks down to a smaller size before using a conventional solver.
+    /// @param A The block matrix
+    /// @param b The right hand side vector
+    /// @param block_size The size of the blocks in the block matrix
+    /// @return The solution vector x
+    bool BlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, arma::cx_vec &x); //TODO: work on the error handling
+
+    //Internal functions used by the block solvers
+    bool IsBlockTridiagonal(arma::sp_cx_mat &A, int block_size);
+    arma::cx_mat BlockMatrixInverse(arma::sp_cx_mat &A, int block_size, bool &Invertible);
+    arma::cx_mat SchurComplementA(arma::cx_mat &A11_inv, arma::sp_cx_mat &A12, arma::sp_cx_mat &A21, arma::sp_cx_mat &A22, bool &invertible);
+    arma::cx_mat SchurComplementB(arma::sp_cx_mat &A11, arma::sp_cx_mat &A12, arma::sp_cx_mat &A21, arma::cx_mat &A22_inv, bool &invertible);
+    arma::cx_mat BothSchurComponents(arma::sp_cx_mat&A11, arma::cx_mat &A11_inv, arma::sp_cx_mat &A12, arma::sp_cx_mat &A21, arma::sp_cx_mat &A22, arma::cx_mat &A22_inv, bool &invertible);
+    arma::sp_cx_mat AugmentedMatrix(arma::sp_cx_mat Mat, arma::cx_vec b);
+    arma::cx_mat AugmentedMatrix(arma::cx_mat Mat, arma::cx_vec b);
+    std::pair<arma::cx_mat, arma::cx_vec> UndoAugmentedMatrix(arma::cx_mat AugMat);
+
+
+#pragma endregion
+
+#pragma region SparseMatrixSolvers
     //DONT USE THESE FUNCTIONS THEY ARE SLOW 
     //SparseMatrixSolvers
     //Preconditioned BiCGSTAB solver
@@ -54,7 +92,7 @@ namespace RunSection
     std::vector<int> LUDecomposition(arma::sp_cx_mat &K);
     arma::cx_vec LUSolve(arma::sp_cx_mat &K, std::vector<int> &P, arma::cx_vec &b); //LU decomposition and solve
 
-
+#pragma endregion
 }
 
 #endif

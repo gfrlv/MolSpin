@@ -14,7 +14,7 @@
 CMakeLists.txt.user
 build
 .idea
-.vscode
+#.vscode
 *.Identifier
 
 #Eigen-Free branch
@@ -29,6 +29,7 @@ FWW*
 *.zip
 msd-files/
 *.out
+python/
 
 #ignore vscode workspase files
 MolSpin.code-workspace
