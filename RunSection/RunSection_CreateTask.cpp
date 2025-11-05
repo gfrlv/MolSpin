@@ -112,7 +112,7 @@ namespace RunSection
 			task = std::make_shared<TaskMultiStaticSSTimeEvo>(_obj, *this);
 		}
 		// NEW (Added by Benji Tigg): is a direct calculation of the yield via the laplacian rather than time-evolution 
-		else if (_tasktype.compare("multistaticss"))
+		else if (_tasktype.compare("multistaticss") == 0 || _tasktype.compare("MultiStaticSS") == 0 )
 		{
 			task = std::make_shared<TaskMultiStaticSS>(_obj, *this);
 		}

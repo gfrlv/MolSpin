@@ -11,8 +11,8 @@
 // (c) 2025 Quantum Biology and Computational Physics Group.
 // See LICENSE.txt for license information.
 /////////////////////////////////////////////////////////////////////////
-#ifndef MOD_RunSection_TaskMultiStaticSSTimeEvo
-#define MOD_RunSection_TaskMultiStaticSSTimeEvo
+#ifndef MOD_RunSection_TaskMultiStaticSS
+#define MOD_RunSection_TaskMultiStaticSS
 
 #include "BasicTask.h"
 #include "SpinSpace.h"
@@ -26,12 +26,10 @@ namespace RunSection
 	private:
 		double timestep;
 		double totaltime;
+		bool productYieldsOnly;
 		SpinAPI::ReactionOperatorType reactionOperators;
 
 		void WriteHeader(std::ostream &); // Write header for the output file
-
-		// Private method that gathers and outputs the results from a given time-integrated density operator
-		void GatherResults(const arma::cx_mat &, const SpinAPI::SpinSystem &, const SpinAPI::SpinSpace &);
 
 	protected:
 		bool RunLocal() override;

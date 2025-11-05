@@ -48,7 +48,7 @@ namespace RunSection
 		auto systems = this->SpinSystems();
 		std::vector<std::pair<std::shared_ptr<SpinAPI::SpinSystem>, std::shared_ptr<SpinAPI::SpinSpace>>> spaces;
 		unsigned int dimensions = 0;
-		unsigned int DimensionSize = 0;
+		int DimensionSize = 0;
 		bool SameDimension = true;
 		for (auto i = systems.cbegin(); i != systems.cend(); i++)
 		{
@@ -75,7 +75,7 @@ namespace RunSection
 		// Now, create a matrix to hold the Liouvillian superoperator and the initial state
 		arma::sp_cx_mat L(dimensions, dimensions);
 		arma::cx_vec rho0(dimensions);
-		unsigned int nextDimension = 0; // Keeps track of the dimension where the next spin space starts
+		int nextDimension = 0; // Keeps track of the dimension where the next spin space starts
 
 		// Loop through the systems again to fill this matrix and vector
 		std::vector<arma::sp_cx_mat> Blocks;
@@ -151,11 +151,11 @@ namespace RunSection
 			if(BlockCache)
 			{
 				arma::sp_cx_mat TempMat = arma::cx_double(0.0, -1.0) * (H + K);
-				Blocks.insert(Blocks.begin() + (3*spaces) * 1, TempMat);
+				Blocks.insert(Blocks.begin() + (3*spaces.size()) + 1, TempMat);
 			}
 
 			// Obtain the creation operators - note that we need to loop through the other SpinSystems again to find transitions leading into the current SpinSystem
-			unsigned int nextCDimension = 0; // Similar to nextDimension, but to keep track of first dimension for this other SpinSystem
+			int nextCDimension = 0; // Similar to nextDimension, but to keep track of first dimension for this other SpinSystem
 			for (auto j = spaces.cbegin(); j != spaces.cend(); j++)
 			{
 				// Creation operators are off-diagonal elements
@@ -178,21 +178,23 @@ namespace RunSection
 							// Put it into the total Liouvillian:
 							//  - The row should be that of the current spin space (the target space)
 							//  - The column should be that of the source spin space (the spin system containing the Transition object)
-
-							L.submat(nextDimension, nextCDimension, nextDimension + i->second->SpaceDimensions() - 1, nextCDimension + j->second->SpaceDimensions() - 1) += C * (*t)->Rate();
+							arma::sp_cx_mat Cmod = C * (*t)->Rate();
+							L.submat(nextDimension, nextCDimension, nextDimension + i->second->SpaceDimensions() - 1, nextCDimension + j->second->SpaceDimensions() - 1) += Cmod;
 							
 							if(!SameDimension)
 								continue;
 							if(!BlockCache)
 								continue;
 							if(std::abs(nextCDimension % DimensionSize - nextDimension % DimensionSize) > 1)
+							{
 								BlockCache = false;
 								continue;
+							}
 
 							int col = nextCDimension % DimensionSize;
-							int row = spaces;
+							int row = j - spaces.begin();
 							int BlockIndex = (3*row) + 1 + (row-col);
-							Blocks.insert(Blocks.begin() * BlockIndex)							
+							Blocks.insert(Blocks.begin() + BlockIndex, Cmod);							
 						}
 					}
 				}
@@ -205,149 +207,116 @@ namespace RunSection
 			nextDimension += i->second->SpaceDimensions();
 		}
 
-		// Write results for initial state as well (i.e. at time 0)
-		this->Data() << this->RunSettings()->CurrentStep() << " 0 ";
-		this->WriteStandardOutput(this->Data());
-		nextDimension = 0;
-		for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
-		{
-			// Get the superspace result vector and convert it back to the native Hilbert space
-			arma::cx_mat rho_result;
-			arma::cx_vec rho_result_vec;
-			rho_result_vec = rho0.rows(nextDimension, nextDimension + i->second->SpaceDimensions() - 1);
-			if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
-			{
-				this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
-				return false;
-			}
-
-			// Get the results
-			this->GatherResults(rho_result, *(i->first), *(i->second));
-
-			// Move on to next spin space
-			nextDimension += i->second->SpaceDimensions();
-		}
-		this->Data() << std::endl;
-
 		arma::cx_vec result = arma::cx_vec(rho0.n_rows);
+		this->Log() << "Ready to perform calculation." << std::endl;
 		if(BlockCache)
 		{
-			int BlockSize = arma::cx_vec(rho0.n_rows);
+			int BlockSize = rho0.n_rows / spaces.size();
 			ThomasBlockSolver(L,rho0,BlockSize,Blocks);
 		}
-
-		//int block_size = dimensions / systems.size();
-		//
-		//using std::chrono::high_resolution_clock;
-    	//using std::chrono::duration_cast;
-    	//using std::chrono::duration;
-    	//using std::chrono::milliseconds;
-//
-    	//auto t1 = high_resolution_clock::now();
-		//BlockSolver(L, rho0, block_size, result);
-		//auto t2 = high_resolution_clock::now();
-		////std::cout << result << std::endl;
-		//auto t3 = high_resolution_clock::now();
-		//arma::cx_vec result2 = arma::solve(arma::cx_mat(L), rho0);
-		//auto t4 = high_resolution_clock::now();
-		////std::cout << result2 << std::endl;
-		//duration<double, std::milli> T1 = t2-t1;
-		//duration<double, std::milli> T2 = t4-t3;
-		//this->Log() << T1.count() << " , " << T2.count() << std::endl;
-//
-		////check difference between the two solvers
-		//std::complex<double> diff = 0;
-		//for (size_t i = 0; i < result.n_rows; i++)
-		//{
-		//	//std::cout << result(i) << " , " << result2(i) << std::endl;
-		//	diff += std::abs(result(i) - result2(i));
-		//}
-		//this->Log() << "Difference between solvers: " << diff << std::endl;
-
-		// We need the propagator
-		this->Log() << "Calculating the propagator..." << std::endl;
-		arma::cx_mat P = arma::expmat(arma::conv_to<arma::cx_mat>::from(L) * this->timestep);
-
-		// Perform the calculation
-		this->Log() << "Ready to perform calculation." << std::endl;
-		unsigned int steps = static_cast<unsigned int>(std::abs(this->totaltime / this->timestep));
-		for (unsigned int n = 1; n <= steps; n++)
+		else
 		{
-			// Write first part of the data output
-			this->Data() << this->RunSettings()->CurrentStep() << " ";
-			this->Data() << (static_cast<double>(n) * this->timestep) << " ";
-			this->WriteStandardOutput(this->Data());
+			result = arma::solve(arma::cx_mat(L), rho0);
+		}
+		this->Log() << "Done with calculation." << std::endl;
 
-			// Propagate (use special scope to be able to dispose of the temporary vector asap)
-			{
-				arma::cx_vec tmp = P * rho0;
-				rho0 = tmp;
-			}
+		//Obtain results
+		arma::cx_mat P;
+		double SumYield = 0.0;
 
-			// Retrieve the resulting density matrix for each spin system and output the results
-			nextDimension = 0;
+		this->Data() << this->RunSettings()->CurrentStep() << " ";
+		this->WriteStandardOutput(this->Data());
+		
+		// There are two result modes - either write results per transition or for each defined state
+		if (this->productYieldsOnly)
+		{
+			int NextDimension = 0;
 			for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
 			{
-				// Get the superspace result vector and convert it back to the native Hilbert space
 				arma::cx_mat rho_result;
-				arma::cx_vec rho_result_vec;
-				rho_result_vec = rho0.rows(nextDimension, nextDimension + i->second->SpaceDimensions() - 1);
+				arma::cx_vec rho_result_vec = rho0.rows(NextDimension,NextDimension + i->second->SpaceDimensions());
 				if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
 				{
 					this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
 					return false;
 				}
 
-				// Get the results
-				this->GatherResults(rho_result, *(i->first), *(i->second));
-
-				// Move on to next spin space
-				nextDimension += i->second->SpaceDimensions();
+				// Loop through all defind transitions
+				auto transitions = (*i).first->Transitions();
+				for (auto j = transitions.cbegin(); j != transitions.cend(); j++)
+				{
+					// Make sure that there is a state object
+					if ((*j)->SourceState() == nullptr)
+						continue;	
+					if (!i->second->GetState((*j)->SourceState(), P))
+					{
+						this->Log() << "Failed to obtain projection matrix onto state \"" << (*j)->Name() << "\" of SpinSystem \"" << (*i).first->Name() << "\"." << std::endl;
+						continue;
+					}
+					double Yield = (*j)->Rate() * std::abs(arma::trace(P * rho_result));
+					SumYield += Yield;
+					// Return the yield for this transition
+					this->Data() << Yield << " ";
+				}
 			}
-
-			// Terminate the line in the data file after iteration through all spin systems
-			this->Data() << std::endl;
+			this->Data() << SumYield << " ";
+			SumYield = 0;
 		}
+		else
+		{
+			int NextDimension = 0;
+			for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
+			{
+				arma::cx_mat rho_result;
+				arma::cx_vec rho_result_vec = rho0.rows(NextDimension,NextDimension + i->second->SpaceDimensions());
+				if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
+				{
+					this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
+					return false;
+				}
 
-		this->Log() << "Done with calculation." << std::endl;
+				auto states = (*i).first->States();
+				for(auto j = states.cbegin(); j != states.cend(); j++)
+				{
+					if (!i->second->GetState((*j), P))
+					{
+						this->Log() << "Failed to obtain projection matrix onto state \"" << (*j)->Name() << "\" of SpinSystem \"" << (*i).first->Name() << "\"." << std::endl;
+						continue;
+					}
+
+					// Return the yield for this state - note that no reaction rates are included here.
+					this->Data() << std::abs(arma::trace(P * rho_result)) << " ";
+				}
+			}
+		}
+		this->Data() << std::endl;
 
 		return true;
-	}
-
-	// Gathers and outputs the results from a given time-integrated density operator
-	void TaskMultiStaticSS::GatherResults(const arma::cx_mat &_rho, const SpinAPI::SpinSystem &_system, const SpinAPI::SpinSpace &_space)
-	{
-		// Loop through all states
-		arma::cx_mat P;
-		auto states = _system.States();
-		for (auto j = states.cbegin(); j != states.cend(); j++)
-		{
-			if (!_space.GetState((*j), P))
-			{
-				this->Log() << "Failed to obtain projection matrix onto state \"" << (*j)->Name() << "\" of SpinSystem \"" << _system.Name() << "\"." << std::endl;
-				continue;
-			}
-
-			// Return the yield for this state - note that no reaction rates are included here.
-			this->Data() << std::abs(arma::trace(P * _rho)) << " ";
-		}
 	}
 
 	// Writes the header of the data file (but can also be passed to other streams)
 	void TaskMultiStaticSS::WriteHeader(std::ostream &_stream)
 	{
 		_stream << "Step ";
-		_stream << "Time(ns) ";
 		this->WriteStandardOutputHeader(_stream);
 
 		// Get header for each spin system
 		auto systems = this->SpinSystems();
 		for (auto i = systems.cbegin(); i != systems.cend(); i++)
 		{
-			// Write each state name
-			auto states = (*i)->States();
-			for (auto j = states.cbegin(); j != states.cend(); j++)
-				_stream << (*i)->Name() << "." << (*j)->Name() << " ";
+			if(this->productYieldsOnly)
+			{
+				auto transitions = (*i)->Transitions();
+				for (auto j = transitions.cbegin(); j != transitions.cend(); j++)
+					_stream << (*i)->Name() << "." << (*j)->Name() << ".yield ";
+			}
+			else
+			{			
+				// Write each state name
+				auto states = (*i)->States();
+				for (auto j = states.cbegin(); j != states.cend(); j++)
+					_stream << (*i)->Name() << "." << (*j)->Name() << " ";
+			}
 		}
 		_stream << std::endl;
 	}
@@ -355,36 +324,7 @@ namespace RunSection
 	// Validation of the required input
 	bool TaskMultiStaticSS::Validate()
 	{
-		double inputTimestep = 0.0;
-		double inputTotaltime = 0.0;
-
-		// Get timestep
-		if (this->Properties()->Get("timestep", inputTimestep))
-		{
-			if (std::isfinite(inputTimestep) && inputTimestep > 0.0)
-			{
-				this->timestep = inputTimestep;
-			}
-			else
-			{
-				// We can run the calculation if an invalid timestep was specified
-				return false;
-			}
-		}
-
-		// Get totaltime
-		if (this->Properties()->Get("totaltime", inputTotaltime))
-		{
-			if (std::isfinite(inputTotaltime) && inputTotaltime > 0.0)
-			{
-				this->totaltime = inputTotaltime;
-			}
-			else
-			{
-				// We can run the calculation if an invalid total time was specified
-				return false;
-			}
-		}
+		this->Properties()->Get("transitionyields", this->productYieldsOnly);
 
 		// Get the reacton operator type
 		std::string str;

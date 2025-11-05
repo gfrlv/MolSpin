@@ -112,7 +112,6 @@ namespace RunSection
 				return false;
 			}
 			L.submat(nextDimension, nextDimension, nextDimension + i->second->SpaceDimensions() - 1, nextDimension + i->second->SpaceDimensions() - 1) = arma::cx_double(0.0, -1.0) * H;
-			Blocks
 
 			// Then get the reaction operators
 			arma::sp_cx_mat K;
