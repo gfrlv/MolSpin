@@ -239,6 +239,51 @@ SpinSystem RPD
 	}	
 }
 
+SpinSystem RPB
+{
+	Spin electron1
+	{
+		spin = 1/2;
+		type = electron;
+		tensor = isotropic(2);
+	}
+
+	Spin electron2
+	{
+		spin = 1/2;
+		type = electron;
+		tensor = isotropic(2);
+	}
+
+	Spin nucleus1
+	{
+		spin = 1/2;
+		type = nucleus;
+		tensor = isotropic("1.0");
+	}
+
+	Spin nucleus2
+	{
+		spin = 1/2;
+		type = nucleus;
+		tensor = anisotropic("0.5 0.5 0");
+	}
+
+	Spin nucleus3
+	{
+		spin = 1/2;
+		type = nucleus;
+		tensor = anisotropic("0.0 0.5 0.3");
+	}
+
+	Interaction Zeeman
+	{
+		type = Zeeman;
+		field = "0 0 5e-5";
+		spins = electron1, electron2;
+	}
+}
+
 
 Run
 {

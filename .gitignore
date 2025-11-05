@@ -21,15 +21,15 @@ build
 Vendor/
 
 #ignore personal msd files
-#*.py
+*.py
 *.csv
 rp*.msd
 CISS*.msd
 FWW*
 *.zip
-#msd-files/
+msd-files/
 *.out
-#python/
+python/
 
 #ignore vscode workspase files
 MolSpin.code-workspace

@@ -275,11 +275,14 @@ namespace RunSection
         return NewStepSize;
     }
 
-    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size)
+    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, std::vector<arma::sp_cx_mat>CachedBlocks)
     {
         int n_blocks = A.n_rows / block_size; //the total number of blocks in the matrix (including those that are zero)
         std::vector<arma::sp_cx_mat> A_blocks; 
         std::vector<arma::cx_vec> B_blocks;
+        bool Cached = false;
+        if(CachedBlocks.size() != 0)
+            Cached = true;
 
         //number of blocks needed
         //A is tridigonal, so we only need to store the blocks on the diagonal and the blocks above and below it
@@ -297,6 +300,9 @@ namespace RunSection
             //B block
             arma::cx_vec B_subblock = b.rows(i * block_size, (i + 1) * block_size - 1);
             B_blocks.insert(B_blocks.begin() + i, B_subblock);
+
+            if(Cached)
+                continue;
 
             if(i==0)
             {
@@ -364,6 +370,8 @@ namespace RunSection
         |0        ...    0  L_n-1 D_n-1 U_n-1 | |x_n-1|   |b_n-1|
         |0        ...         0   L_n   D_n   | |x_n|     |b_n|
         */
+        if(Cached)
+            A_blocks = CachedBlocks;
 
         for (int i = 1; i < n_blocks; i++)
         {

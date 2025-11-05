@@ -243,8 +243,8 @@ def CheckRowSwap(Blocks, i, offset) -> bool:
 
 if __name__ == '__main__':
     #np.random.seed(0)
-    bs = 2
-    nblk = 5
+    bs = 1024
+    nblk = 2
     N = bs * nblk
     Ad = np.zeros((N, N), dtype=np.complex128)
     for i in range(nblk):
@@ -268,7 +268,7 @@ if __name__ == '__main__':
     #A[0*bs:1*bs, 0*bs:1*bs] = np.zeros((bs,bs),dtype=np.complex128)
     #print(A[0*bs:1*bs, 0*bs:1*bs])
     print(A)
-    A[1*bs:2*bs, 2*bs:3*bs] = np.zeros((bs, bs),dtype=np.complex128)
+    #A[1*bs:2*bs, 2*bs:3*bs] = np.zeros((bs, bs),dtype=np.complex128)
     #A[4*bs:5*bs, 3*bs:4*bs] = np.zeros((bs, bs))
     #make a entire row of blocks zero to test pivoting
     #A[2*bs:3*bs, :] = sp.csc_matrix(np.zeros((bs, N)))

@@ -21,6 +21,7 @@
 #include "TaskPeriodicHSTimeEvo.h"
 #include "TaskGammaCompute.h"
 #include "TaskMultiStaticSSTimeEvo.h"
+#include "TaskMultiStaticSS.h" // added by Benji 
 #include "TaskMultiDynamicHSTimeEvo.h"
 
 #include "TaskMultiStaticSSTimeEvoSpectra.h"
@@ -109,6 +110,11 @@ namespace RunSection
 		else if (_tasktype.compare("multistaticss-timeevolution") == 0 || _tasktype.compare("staticss-multisystem") == 0)
 		{
 			task = std::make_shared<TaskMultiStaticSSTimeEvo>(_obj, *this);
+		}
+		// NEW (Added by Benji Tigg): is a direct calculation of the yield via the laplacian rather than time-evolution 
+		else if (_tasktype.compare("multistaticss"))
+		{
+			task = std::make_shared<TaskMultiStaticSS>(_obj, *this);
 		}
 		else if (_tasktype.compare("multidynamichs-timeevolution") == 0 || _tasktype.compare("dynamichs-multisystem") == 0)
 		{
@@ -250,16 +256,11 @@ namespace RunSection
 			task = std::make_shared<TaskStaticSSPump>(_obj, *this);
 		}
 
+		//Being removed due to task cleanup - Benji
 		// NEW (ADDED by Benji Tigg)
 		else if (_tasktype.compare("multiradicalpairss-timeevolution") == 0)
 		{
 			task = std::make_shared<TaskMultiRadicalPairSSTimeEvo>(_obj, *this);
-		}
-		// NEW (ADDED by Benji Tigg)
-		else if (_tasktype.compare("multiradicalpair-yields"))
-		{
-			// task = std::make_shared<TaskMutliRadicalPairSSYield>(_obj, *this);
-			// Task doesn't exist yet
 		}
 
 		// NOTE: To add a new task class, just add another "else if" here...
