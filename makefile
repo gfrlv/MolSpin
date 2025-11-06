@@ -69,9 +69,12 @@ PATH_LINALG_VENDOR = ./Vendor/
 # General Compilation Options
 OBJECTS = main.o $(OBJS_SPINAPI) $(OBJS_MSDPARSER) $(OBJS_RUNSECTION) $(OBJS_RUNSECTION_TASKS) $(OBJS_RUNSECTION_ACTIONS)
 CC = g++ -std=c++17		# Compiler to use
-DEBUG = -g				# Add this to LFLAGS/CFLAGS to be able to debug
-LFLAGS = -Wall -g -DARMA_DONT_PRINT_FAST_MATH_WARNING -O3	# Linker Flags
-CFLAGS = -Wall -c -march=native -funroll-loops -fconcepts -g -fopenmp -DARMA_DONT_PRINT_FAST_MATH_WARNING -O3 # Compile flags to .o
+LFLAGS = -Wall -g -DARMA_DONT_PRINT_FAST_MATH_WARNING #-O3	# Linker Flags
+CFLAGS = -Wall -c -march=native -funroll-loops -fconcepts -g -fopenmp -DARMA_DONT_PRINT_FAST_MATH_WARNING #-O3 # Compile flags to .o
+
+#DEBUGLFLAGS = -Wall -g -DARMA_DONT_PRINT_FAST_MATH_WARNING
+#DEBUGCFLAGS = -Wall -c -march=native -funroll-loops -fconcepts -g -fopenmp -DARMA_DONT_PRINT_FAST_MATH_WARNING -Werror -Wextra
+
 # --------------------------------------------------------------------------
 # Compilation of the main program
 # --------------------------------------------------------------------------
@@ -82,6 +85,17 @@ molspin: $(OBJECTS)
 SEARCHDIR_MAIN = -I$(PATH_SPINAPI) -I$(PATH_MSDPARSER) -I$(PATH_RUNSECTION) -I$(PATH_RUNSECTION_TASKS) -I$(PATH_RUNSECTION_CUSTOMTASKS) -I$(PATH_RUNSECTION_ACTIONS) -I$(PATH_LINALG_VENDOR) $(ARMADILLO)
 main.o: main.cpp $(DEP_MSDPARSER) $(DEP_SPINAPI)
 	$(CC) $(CFLAGS) $(SEARCHDIR_MAIN) main.cpp -o main.o
+#---------------------------------------------------------------------------
+# Debug Complimation of the main program
+#---------------------------------------------------------------------------
+#DEBUGEXE = debug/molspin
+#DEBUGOBJECTS = $(addprefix debug/,$(OBJECTS))
+#$(DEBUGEXE): $(OBJECTS)
+#	$(DEBUGCC) $(DEBUGLFLAGS) $^ $(SEARCHDIR_MOLSPIN) -o $@
+#
+#
+#debug/main.o: main.cpp $(DEP_MSDPARSER) $(DEP_SPINAPI)
+#	$(DEBUGCC) $(DEBUGCFLAGS) $(SEARCHDIR_MAIN) main.cpp -o debug/main.o
 # --------------------------------------------------------------------------
 # Specific compilation rules
 # --------------------------------------------------------------------------
@@ -115,6 +129,7 @@ $(PATH_TESTS)/testmain.o: $(PATH_TESTS)/testmain.cpp $(PATH_TESTS)/tests_spinapi
 .PHONY: clean
 clean:
 	rm *.o $(PATH_MSDPARSER)/*.o $(PATH_SPINAPI)/*.o $(PATH_RUNSECTION)/*.o $(PATH_RUNSECTION_ACTIONS)/*.o $(PATH_RUNSECTION_TASKS)/*.o $(PATH_RUNSECTION_CUSTOMTASKS)/*.o molspin $(PATH_TESTS)/*.o $(PATH_TESTS)/molspintest
+#	rm debug/*.o
 
 # Clean-up testing binaries and run the test again
 .PHONY: cleantest

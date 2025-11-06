@@ -83,13 +83,15 @@ namespace RunSection
 		if(systems.size() > 2 && SameDimension) //Testing has showed that for less than 3 spin systems the BlockTridiagonal method is slower than the standard armadillo solver
 		{
 			int TriDiagonalBlocks = 3 * systems.size();
-			Blocks.reserve(TriDiagonalBlocks);
 			arma::sp_cx_mat ZeroMatrix(DimensionSize,DimensionSize);
-			Blocks.insert(Blocks.begin(),ZeroMatrix);
+			for (int i = 0; i < TriDiagonalBlocks; i++)
+			{
+				Blocks.push_back(ZeroMatrix);
+			}
 			BlockCache = true;
 
 		}
-		int space = 0;
+		//int space = 0;
 		for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
 		{
 
@@ -151,7 +153,7 @@ namespace RunSection
 			if(BlockCache)
 			{
 				arma::sp_cx_mat TempMat = arma::cx_double(0.0, -1.0) * (H + K);
-				Blocks.insert(Blocks.begin() + (3*spaces.size()) + 1, TempMat);
+				Blocks[3*(i-spaces.begin()) + 1] = TempMat;
 			}
 
 			// Obtain the creation operators - note that we need to loop through the other SpinSystems again to find transitions leading into the current SpinSystem
@@ -185,16 +187,16 @@ namespace RunSection
 								continue;
 							if(!BlockCache)
 								continue;
-							if(std::abs(nextCDimension % DimensionSize - nextDimension % DimensionSize) > 1)
+							if(std::abs(nextCDimension / DimensionSize - nextDimension / DimensionSize) > 1)
 							{
 								BlockCache = false;
 								continue;
 							}
 
-							int col = nextCDimension % DimensionSize;
-							int row = j - spaces.begin();
-							int BlockIndex = (3*row) + 1 + (row-col);
-							Blocks.insert(Blocks.begin() + BlockIndex, Cmod);							
+							int col = j - spaces.begin();
+							int row = i - spaces.begin();
+							int BlockIndex = (3*row) + 1 + (col - row);
+							Blocks[BlockIndex] = Cmod;							
 						}
 					}
 				}
@@ -212,12 +214,15 @@ namespace RunSection
 		if(BlockCache)
 		{
 			int BlockSize = rho0.n_rows / spaces.size();
-			ThomasBlockSolver(L,rho0,BlockSize,Blocks);
+			this->Log() << "Using Tridiagonal solver" << std::endl;
+			result = ThomasBlockSolver(L,rho0,BlockSize,Blocks);
 		}
 		else
 		{
+			this->Log() << "Using Armadillo solver" << std::endl;
 			result = arma::solve(arma::cx_mat(L), rho0);
 		}
+		rho0 = result;
 		this->Log() << "Done with calculation." << std::endl;
 
 		//Obtain results
@@ -234,7 +239,9 @@ namespace RunSection
 			for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
 			{
 				arma::cx_mat rho_result;
-				arma::cx_vec rho_result_vec = rho0.rows(NextDimension,NextDimension + i->second->SpaceDimensions());
+				int TempDimension = NextDimension + i->second->SpaceDimensions();
+				arma::cx_vec rho_result_vec = rho0.rows(NextDimension,TempDimension);
+				NextDimension = TempDimension;
 				if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
 				{
 					this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
@@ -268,7 +275,9 @@ namespace RunSection
 			for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
 			{
 				arma::cx_mat rho_result;
-				arma::cx_vec rho_result_vec = rho0.rows(NextDimension,NextDimension + i->second->SpaceDimensions());
+				int TempDimension = NextDimension + i->second->SpaceDimensions();
+				arma::cx_vec rho_result_vec = rho0.rows(NextDimension,TempDimension);
+				NextDimension = TempDimension;
 				if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
 				{
 					this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
@@ -324,6 +333,7 @@ namespace RunSection
 	// Validation of the required input
 	bool TaskMultiStaticSS::Validate()
 	{
+		this->productYieldsOnly = false;
 		this->Properties()->Get("transitionyields", this->productYieldsOnly);
 
 		// Get the reacton operator type

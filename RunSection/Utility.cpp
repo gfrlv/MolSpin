@@ -248,6 +248,7 @@ namespace RunSection
             B_blocks[i] = B_new;
 
         }
+
         
         //Back substitution
         std::vector<arma::cx_vec> X_blocks; //Solution blocks - this is reversed 
@@ -270,7 +271,7 @@ namespace RunSection
                 arma::cx_vec X_next = X_blocks[0];
                 arma::cx_vec LHS = B_curr - U_curr * X_next;
                 arma::cx_vec X_last = arma::solve(D_curr, LHS);
-                X_blocks.insert(X_blocks.begin(), X_next);
+                X_blocks.insert(X_blocks.begin(), X_last);
             }
         }
 
@@ -284,7 +285,6 @@ namespace RunSection
         return x;
         
     }
-
 
     bool BlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, arma::cx_vec &x)
     {
