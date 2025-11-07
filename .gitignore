@@ -14,7 +14,7 @@
 CMakeLists.txt.user
 build
 .idea
-#.vscode
+.vscode
 *.Identifier
 
 #Eigen-Free branch
