@@ -185,37 +185,6 @@ namespace RunSection
 		this->Data() << std::endl;
 
 		arma::cx_vec result = arma::cx_vec(rho0.n_rows);
-		//int block_size = dimensions / systems.size();
-		//
-		//using std::chrono::high_resolution_clock;
-    	//using std::chrono::duration_cast;
-    	//using std::chrono::duration;
-    	//using std::chrono::milliseconds;
-//
-    	//auto t1 = high_resolution_clock::now();
-		//BlockSolver(L, rho0, block_size, result);
-		//auto t2 = high_resolution_clock::now();
-		////std::cout << result << std::endl;
-		//auto t3 = high_resolution_clock::now();
-		//arma::cx_vec result2 = arma::solve(arma::cx_mat(L), rho0);
-		//auto t4 = high_resolution_clock::now();
-		////std::cout << result2 << std::endl;
-		//duration<double, std::milli> T1 = t2-t1;
-		//duration<double, std::milli> T2 = t4-t3;
-		//this->Log() << T1.count() << " , " << T2.count() << std::endl;
-//
-		////check difference between the two solvers
-		//std::complex<double> diff = 0;
-		//for (size_t i = 0; i < result.n_rows; i++)
-		//{
-		//	//std::cout << result(i) << " , " << result2(i) << std::endl;
-		//	diff += std::abs(result(i) - result2(i));
-		//}
-		//this->Log() << "Difference between solvers: " << diff << std::endl;
-
-		// We need the propagator
-		//this->Log() << "Calculating the propagator..." << std::endl;
-		//arma::cx_mat P = arma::expmat(arma::conv_to<arma::cx_mat>::from(L) * this->timestep);
 
 		// Perform the calculation
 		this->Log() << "Ready to perform calculation." << std::endl;

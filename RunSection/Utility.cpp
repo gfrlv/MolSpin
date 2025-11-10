@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////
 
 #include "Utility.h"
+
 namespace RunSection
 {
     typedef arma::sp_cx_mat MatrixArma;
@@ -121,14 +122,22 @@ namespace RunSection
         return NewStepSize;
     }
   
-    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, std::vector<arma::sp_cx_mat>CachedBlocks)
+    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, LogFunc, std::vector<arma::sp_cx_mat>CachedBlocks)
     {
         int n_blocks = A.n_rows / block_size; //the total number of blocks in the matrix (including those that are zero)
+        LogFunc() << 'Number of blocks: ' << std::endl;
         std::vector<arma::sp_cx_mat> A_blocks; 
         std::vector<arma::cx_vec> B_blocks;
         bool Cached = false;
         if(CachedBlocks.size() != 0)
             Cached = true;
+        else
+        {
+            if(!IsBlockTridiagonal(A,block_size))
+            {
+                LogFunc() << 'Provided Matrix not Block Tridagonal' << std::endl; 
+            }
+        }
 
         //number of blocks needed
         //A is tridigonal, so we only need to store the blocks on the diagonal and the blocks above and below it
@@ -174,37 +183,7 @@ namespace RunSection
             A_blocks.insert(A_blocks.begin() + count + 1, D);
             A_blocks.insert(A_blocks.begin() + count + 2, U);
             count = count + 3;
-
-
-            //A blocks
-            //Off-digaonal LEFT
-            //if(i > 0)
-            //{
-            //    arma::sp_cx_mat A_subblock_offdiag_left = A.submat(i * block_size, (i-1) * block_size, (i+1) * block_size - 1, i * block_size - 1);
-            //    A_blocks.insert(A_blocks.begin() + count, A_subblock_offdiag_left);
-            //    count++;
-            //    //std::cout << A_subblock_offdiag_left << std::endl;
-            //}
-            ////Diagonal block
-            //arma::sp_cx_mat A_subblock_diag = A.submat(i * block_size, i * block_size, (i+1) * block_size - 1, (i+1) * block_size - 1);
-            //A_blocks.insert(A_blocks.begin() + count, A_subblock_diag);
-            //count++;
-            ////std::cout << A_subblock_diag << std::endl;
-            ////Off-diagonal RIGHT
-            //if(i < n_blocks -1)
-            //{
-            //    arma::sp_cx_mat A_subblock_offdiag_right = A.submat(i * block_size, (i+1) * block_size, (i+1) * block_size - 1, (i+2) * block_size - 1);
-            //    A_blocks.insert(A_blocks.begin() + count, A_subblock_offdiag_right);
-            //    count++;
-            //    //std::cout << A_subblock_offdiag_right << std::endl;
-            //}
         }
-
-        //for (int i = 0; i < TridiagonalBlocks; i++)
-        //{
-        //    std::cout << "A block " << i << ":" << std::endl;
-        //    std::cout << A_blocks[i] << std::endl;
-        //}
 
         //O(n) method so can loop through with a range of n_blocks
         /*

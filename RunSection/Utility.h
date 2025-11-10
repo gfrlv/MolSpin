@@ -14,11 +14,13 @@
 // #include <Eigen/Sparse>
 // #include <Eigen/Core>
 #include "SpinAPIfwd.h"
+#include "OutputHandler.h"
 
 namespace RunSection
 {
     
     typedef arma::cx_vec (*RungeKuttaFuncArma)(double t, arma::sp_cx_mat &, arma::cx_vec &, arma::cx_vec);
+    typedef std::ostream& (*LogFunc)(const MessageType &_msgtype);
     
     /// Runge-Kutta-Fehlberg method (4th and 5th order) with adaptive time step control
     ///     @param L: Liouvillian superoperator (sparse complex matrix)
@@ -44,7 +46,7 @@ namespace RunSection
     /// @param b The right hand side vector
     /// @param block_size The size of the blocks in the block tridiagonal matrix
     /// @return The solution vector x
-    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, std::vector<arma::sp_cx_mat>CachedBlocks = {});
+    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, LogFunc, std::vector<arma::sp_cx_mat>CachedBlocks = {});
 
     /// If the matrix is not tridiaognal a traditional block solver can be used.
     /// This function checks if the matrix is block tridiagonal and if so uses the thomas algorithm.
