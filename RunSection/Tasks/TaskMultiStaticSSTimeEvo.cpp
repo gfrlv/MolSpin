@@ -235,48 +235,6 @@ namespace RunSection
 			this->Data() << std::endl;
 		}
 
-		//Pre RK45 method
-		//unsigned int steps = static_cast<unsigned int>(std::abs(this->totaltime / this->timestep));
-		//for (unsigned int n = 1; n <= steps; n++)
-		//{
-		//	// Write first part of the data output
-		//	this->Data() << this->RunSettings()->CurrentStep() << " ";
-		//	this->Data() << (static_cast<double>(n) * this->timestep) << " ";
-		//	this->WriteStandardOutput(this->Data());
-//
-		//	// Propagate (use special scope to be able to dispose of the temporary vector asap)
-		//	{
-		//		arma::cx_vec tmp = P * rho0;
-		//		rho0 = tmp;
-		//	}
-//
-		//	// Retrieve the resulting density matrix for each spin system and output the results
-		//	nextDimension = 0;
-		//	for (auto i = spaces.cbegin(); i != spaces.cend(); i++)
-		//	{
-		//		// Get the superspace result vector and convert it back to the native Hilbert space
-		//		arma::cx_mat rho_result;
-		//		arma::cx_vec rho_result_vec;
-		//		rho_result_vec = rho0.rows(nextDimension, nextDimension + i->second->SpaceDimensions() - 1);
-		//		if (!i->second->OperatorFromSuperspace(rho_result_vec, rho_result))
-		//		{
-		//			this->Log() << "ERROR: Failed to convert resulting superspace-vector back to native Hilbert space for spin system \"" << i->first->Name() << "\"!" << std::endl;
-		//			return false;
-		//		}
-//
-		//		// Get the results
-		//		this->GatherResults(rho_result, *(i->first), *(i->second));
-//
-		//		// Move on to next spin space
-		//		nextDimension += i->second->SpaceDimensions();
-		//	}
-//
-		//	// Terminate the line in the data file after iteration through all spin systems
-		//	this->Data() << std::endl;
-		//}
-//
-		//this->Log() << "Done with calculation." << std::endl;
-
 		return true;
 	}
 

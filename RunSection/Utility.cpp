@@ -122,10 +122,9 @@ namespace RunSection
         return NewStepSize;
     }
   
-    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, LogFunc, std::vector<arma::sp_cx_mat>CachedBlocks)
+    arma::cx_vec ThomasBlockSolver(arma::sp_cx_mat &A, arma::cx_vec &b, int block_size, std::vector<arma::sp_cx_mat>CachedBlocks)
     {
         int n_blocks = A.n_rows / block_size; //the total number of blocks in the matrix (including those that are zero)
-        LogFunc() << 'Number of blocks: ' << std::endl;
         std::vector<arma::sp_cx_mat> A_blocks; 
         std::vector<arma::cx_vec> B_blocks;
         bool Cached = false;
@@ -135,7 +134,7 @@ namespace RunSection
         {
             if(!IsBlockTridiagonal(A,block_size))
             {
-                LogFunc() << 'Provided Matrix not Block Tridagonal' << std::endl; 
+                return arma::cx_vec();
             }
         }
 
