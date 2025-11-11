@@ -218,7 +218,27 @@ namespace RunSection
 		return false;
 	}
 
-	// Method that provides access to the calculation settings
+    void BasicTask::SelectPropagator(std::string str)
+    {
+		if(str == "RK4")
+		{
+			this->prop = Propagator::RK4; //not currently supported
+			return;
+		}
+		if(str == "exp")
+		{
+			this->prop = Propagator::exp;
+			return;
+		}
+		if(str == "RK45")
+		{
+			this->prop = Propagator::RK45;
+			return;
+		}
+		this->prop = Propagator::Defualt;
+    }
+
+    // Method that provides access to the calculation settings
 	std::shared_ptr<const Settings> BasicTask::RunSettings() const
 	{
 		return this->runsection.settings;
