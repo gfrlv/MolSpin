@@ -93,32 +93,21 @@ SpinSystem RPC
 
 	Transition SingletDecay
 	{
-		rate = 1;
+		rate = 0;
 		source = Singlet;
 	}
 	
 	Transition spinindependent_decay
 	{
-		rate = 1;
+		rate = 0;
 		source = Identity;
 	}
 
-	Transition RPtransition
-	{
-		rate = 1e4;
-		source = Identity;
-		targetsystem = RPD;
-		targetstate = Identity;
-	}
+	Transition RPtransitionSinglet 	{rate = 1; source = Singlet; targetsystem = RPD; targetstate = Singlet;}
+	Transition RPtransitionTriplet 	{rate = 1; source = T0; targetsystem = RPD; targetstate = T0;}
+	Transition RPtransitionTPlus 	{rate = 1; source = TPlus; targetsystem = RPD; targetstate = TPlus;}
+	Transition RPtransitionTMinus 	{rate = 1; source = TMinus; targetsystem = RPD; targetstate = TMinus;}
 
-	Transition rptransition2
-	{
-		rate = 10;
-		source = TPlus;
-		targetsystem = RPB;
-		targetstate = TPlus;
-	}
-	
 	Properties prop
 	{
 		initialstate = Singlet;
@@ -126,7 +115,7 @@ SpinSystem RPC
 		
 }
 
-SpinSystem RPD 
+SpinSystem RPD
 {
 	Spin electron1
 	{
@@ -188,7 +177,7 @@ SpinSystem RPD
 		group2 = nucleus3;
 		tensor=matrix(" -0.294412424 -0.0568059200 -1.02860888;
  						-0.0568059200 -0.540578469  -0.0267686240;
- 						-1.02860888 -0.0267686240 50.5815320 ")
+ 						-1.02860888 -0.0267686240 50.5815320 ");
 		prefactor =3.568245455e-5;
 	}
 
@@ -218,36 +207,37 @@ SpinSystem RPD
 	{
 	}
 
-	Transition RPtransition2
-	{
-		rate = 1e4;
-		source = Identity;
-		targetsystem = RPC;
-		targetstate = Identity;
-	}
+	Transition RPtransitionSinglet 	{rate = 1; source = Singlet; 	targetsystem = RPC; targetstate = Singlet;}
+	Transition RPtransitionTriplet 	{rate = 1; source = T0; 	targetsystem = RPC; targetstate = T0;}
+	Transition RPtransitionTPlus 	{rate = 1; source = TPlus; 		targetsystem = RPC; targetstate = TPlus;}
+	Transition RPtransitionTMinus 	{rate = 1; source = TMinus; 	targetsystem = RPC; targetstate = TMinus;}
+
 
 	Transition spinindependent_decay2
 	{
-		rate = 1;
+		rate = 0;
 		source = Identity;
 	}
 
 	Properties prop
 	{
 		initialstate = zero;
-	}	
+	}
+
 }
 
 Run
 {
 	Task CalculateQuantumYeild
 	{
-		type = MultiStaticSS-timeevolution; //MultiStaticSS
+		type = MultiStaticSS-timeevolution; 
+		//MultiStaticSS
 		logfile = "logfile.log";
 		datafile = "result.dat";
 		timestep = 1e-4;
 		totaltime = 12;
-		propagator = exp; //RK45
+		propagator = exp; 
+		//RK45
 	}
 }
 
