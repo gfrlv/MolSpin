@@ -42,6 +42,8 @@ namespace RunSection
 	bool TaskMultiRadicalPairSSTimeEvo::RunLocal()
 	{
 		this->Log() << "Running method StaticSS-MultiRadicalPairSystem." << std::endl;
+		std::cout << "This task has been depreciated by the MultiStaticSS Task" << std::endl;
+		this->Log() << "This task has been depreciated by the MultiStaticSS Task" << std::endl;
 		this->timestep = this->OriginalTimestep;
 
 		// If this is the first step, write first part of header to the data file

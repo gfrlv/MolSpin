@@ -18,6 +18,7 @@
 #include <fstream>
 #include <unistd.h>
 
+
 //////////////////////////////////////////////////////////////////////////////
 // #ifdef USE_OPENBLAS
 extern "C" void openblas_set_num_threads(int);
@@ -28,6 +29,7 @@ extern "C" void omp_set_num_threads(int);
 //////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
+
 	const std::string MolSpin_version = "v2.3";
 	const std::string hline = "# ---------------------------------------------------------------------------------";
 
