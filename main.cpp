@@ -18,7 +18,6 @@
 #include <fstream>
 #include <unistd.h>
 
-
 //////////////////////////////////////////////////////////////////////////////
 // #ifdef USE_OPENBLAS
 extern "C" void openblas_set_num_threads(int);
