@@ -150,7 +150,7 @@ SpinSystem RPD
 		spin = 1/2;
 		type = nucleus;
 		tensor = isotropic("1.0");
-	
+	}
 
 	Interaction Zeeman
 	{
@@ -248,4 +248,5 @@ Settings
 		steps = 1;
 	}
 }
+
 
