@@ -365,7 +365,7 @@ namespace RunSection
 			this->SelectPropagator(propagator_str);
 		}
 		
-		if(this->prop == Propagator::Defualt)
+		if(this->prop == Propagator::Default)
 			this->prop = Propagator::RK45;
 
 		// Get the reacton operator type
