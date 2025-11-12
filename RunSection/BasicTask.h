@@ -29,6 +29,14 @@
 
 namespace RunSection
 {
+
+	enum class Propagator
+	{
+		Default = 0, //whatever the timeevo class chooses
+		exp = 1,
+		RK4 = 2,
+		RK45 = 3
+	};
 	class BasicTask
 	{
 	private:
@@ -55,6 +63,8 @@ namespace RunSection
 		virtual bool RunLocal() = 0; // Normal run method for a single workstation
 		virtual bool RunMPI();		 // MPI run method to use on a supercomputer cluster (not required to be implemented)
 		virtual bool Validate() = 0; // Method to validate the task, i.e. to check that it has the required parameters etc.
+		
+		virtual void SelectPropagator(std::string str); //Method to choose the Propagator for timeevo tasks
 
 		// Allow access to settings, properties, spin systems, etc. for derived classes
 		std::shared_ptr<const Settings> RunSettings() const;
@@ -68,6 +78,8 @@ namespace RunSection
 		// ActionTarget access
 		bool Scalar(std::string _name, ActionScalar **_scalar = nullptr);
 		bool Vector(std::string _name, ActionVector **_vector = nullptr);
+
+		Propagator prop;
 
 	public:
 		// Constructors / Destructors
@@ -89,6 +101,7 @@ namespace RunSection
 		// Methods to change the Log and Data stream
 		bool SetLogStream(std::ostream &);
 		bool SetDataStream(std::ostream &);
+
 	};
 }
 
