@@ -32,7 +32,7 @@ namespace RunSection
 
 	enum class Propagator
 	{
-		Defualt = 0, //whatever the timeevo class chooses
+		Default = 0, //whatever the timeevo class chooses
 		exp = 1,
 		RK4 = 2,
 		RK45 = 3

@@ -235,7 +235,7 @@ namespace RunSection
 			this->prop = Propagator::RK45;
 			return;
 		}
-		this->prop = Propagator::Defualt;
+		this->prop = Propagator::Default;
     }
 
     // Method that provides access to the calculation settings
