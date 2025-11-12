@@ -93,13 +93,13 @@ SpinSystem RPC
 
 	Transition SingletDecay
 	{
-		rate = 0;
+		rate = 10;
 		source = Singlet;
 	}
 	
 	Transition spinindependent_decay
 	{
-		rate = 0;
+		rate = 1;
 		source = Identity;
 	}
 
@@ -215,7 +215,7 @@ SpinSystem RPD
 
 	Transition spinindependent_decay2
 	{
-		rate = 0;
+		rate = 1;
 		source = Identity;
 	}
 
@@ -248,3 +248,4 @@ Settings
 		steps = 1;
 	}
 }
+
