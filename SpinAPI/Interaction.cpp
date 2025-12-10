@@ -25,7 +25,7 @@ namespace SpinAPI
 																		 trjHasTime(false), trjHasField(false), trjHasTensor(false), trjHasPrefactor(false), trjTime(0), trjFieldX(0), trjFieldY(0), trjFieldZ(0), trjPrefactor(0),
 																		 tdFrequency(1.0), tdPhase(0.0), tdAxis("0 0 1"), tdPerpendicularOscillation(false), tdInitialField({0, 0, 0}), tensorType(InteractionTensorType::Static), tdTimestep(0),
 																		 tdInitialTensor(3, 3, arma::fill::zeros), tdMinFreq(0.0), tdMaxFreq(0.0), tdFreqs(), tdAmps(), tdPhases(), tdComponents(0), tdRandOrients(false), tdThetas(), tdPhis(), tdCorrTime(0.0),
-																		 tdPrintTensor(false), tdPrintField(false), tdSeed(0), tdAutoseed(false), tdGenerator(1) //, tdFreqs(3, 3, arma::fill::zeros)//, tdFreqs({0,0,0})
+																		 tdPrintTensor(false), tdPrintField(false), tdSeed(0), tdAutoseed(false), tdGenerator(1), framelist({0, 0, 0})  //, tdFreqs(3, 3, arma::fill::zeros)//, tdFreqs({0,0,0})
 	{
 		// Is a trajectory specified?
 		std::string str;
@@ -75,10 +75,22 @@ namespace SpinAPI
 					this->field = inField;
 					this->type = InteractionType::SingleSpin;
 				}
+				std::vector<double> _framelist;
+				if (this->Properties()->GetList ("orientation", _framelist))
+				{
+					this->framelist = _framelist;
+				}
+
 			}
 			else if (str.compare("twospin") == 0 || str.compare("doublespin") == 0 || str.compare("hyperfine") == 0 || str.compare("dipole") == 0)
 			{
 				this->type = InteractionType::DoubleSpin;
+
+				std::vector<double> _framelist;
+				if (this->Properties()->GetList ("orientation", _framelist))
+				{
+					this->framelist = _framelist;
+				}
 			}
 			else if (str.compare("exchange") == 0)
 			{
@@ -390,7 +402,7 @@ namespace SpinAPI
 																tdTimestep(_interaction.tdTimestep), tdInitialTensor(_interaction.tdInitialTensor),
 																tdMinFreq(_interaction.tdMinFreq), tdMaxFreq(_interaction.tdMaxFreq), tdFreqs(_interaction.tdFreqs), tdAmps(_interaction.tdAmps), tdPhases(_interaction.tdPhases),
 																tdComponents(_interaction.tdComponents), tdRandOrients(_interaction.tdRandOrients), tdThetas(_interaction.tdThetas), tdPhis(_interaction.tdPhis), tdCorrTime(_interaction.tdCorrTime),
-																tdPrintTensor(_interaction.tdPrintTensor), tdPrintField(_interaction.tdPrintField), tdSeed(_interaction.tdSeed), tdAutoseed(_interaction.tdAutoseed), tdGenerator(_interaction.tdGenerator)
+																tdPrintTensor(_interaction.tdPrintTensor), tdPrintField(_interaction.tdPrintField), tdSeed(_interaction.tdSeed), tdAutoseed(_interaction.tdAutoseed), tdGenerator(_interaction.tdGenerator), framelist(_interaction.framelist)
 
 	{
 	}
@@ -449,6 +461,7 @@ namespace SpinAPI
 		this->tdSeed = _interaction.tdSeed;
 		this->tdAutoseed = _interaction.tdAutoseed;
 		this->tdGenerator = _interaction.tdGenerator;
+		this->framelist = _interaction.framelist;
 
 		return (*this);
 	}
@@ -517,6 +530,12 @@ namespace SpinAPI
 	const double Interaction::Prefactor() const
 	{
 		return this->prefactor;
+	}
+
+	// Returns orientation of the coupling tensor as an euler angles
+	const arma::vec Interaction::Framelist() const
+	{
+		return this->framelist;
 	}
 
 	// Checks whether the interaction field is time-dependent

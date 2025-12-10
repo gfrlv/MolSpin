@@ -217,6 +217,7 @@ namespace SpinAPI
 		// ------------------------------------------------
 		bool InteractionOperator(const interaction_ptr &, arma::cx_mat &) const;	// Returns the matrix representation of the interaction on the spin space (dense matrix)
 		bool InteractionOperator(const interaction_ptr &, arma::sp_cx_mat &) const; // Returns the matrix representation of the interaction on the spin space (sparse matrix)
+		bool InteractionOperatorRotated(const interaction_ptr &, arma::mat &, arma::sp_cx_mat &) const;
 		bool Hamiltonian(arma::cx_mat &) const;										// Total Hamiltonian operator (dense matrix)
 		bool Hamiltonian(arma::sp_cx_mat &) const;									// Total Hamiltonian operator (sparse matrix)
 		bool StaticHamiltonian(arma::cx_mat &) const;								// Time-independent part of the Hamiltonian operator (dense matrix)
@@ -224,6 +225,8 @@ namespace SpinAPI
 		bool DynamicHamiltonian(arma::cx_mat &) const;								// Time-dependent part of the Hamiltonian operator (dense matrix)
 		bool DynamicHamiltonian(arma::sp_cx_mat &) const;							// Time-dependent part of the Hamiltonian operator (sparse matrix)
 		bool ThermalHamiltonian(std::vector<std::string> thermalhamiltonian_list, arma::cx_mat &_out) const;							// Time-independent part of the Hamiltonian for thermal state (dense matrix)
+		bool ThermalHamiltonian(std::vector<std::string> thermalhamiltonian_list, arma::sp_cx_mat &_out) const;							// Time-independent part of the Hamiltonian for thermal state (sparse matrix)
+		bool BaseHamiltonianRotated(std::vector<std::string> basehamiltonian_list, arma::mat rotmatrix, arma::sp_cx_mat &_out) const;
 
 		// ------------------------------------------------
 		// Transitions/decay operators (SpinSpace_transitions.cpp)
