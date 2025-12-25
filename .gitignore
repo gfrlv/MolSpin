@@ -15,7 +15,9 @@ CMakeLists.txt.user
 build
 .idea
 .vscode
+.cache
 *.Identifier
+compile_commands.json
 
 #Eigen-Free branch
 Vendor/

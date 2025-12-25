@@ -14,13 +14,56 @@ endif()
 find_package(Armadillo)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 
+# Special handling of OpenBLAS on MacOS
+# (brew hides it by default in order not to interfere with Apple BLAS)
+if(APPLE)
+	# for a non-standard installation, set OPENBLAS_ROOT 
+    if(NOT DEFINED OPENBLAS_ROOT)
+        if(EXISTS "/opt/homebrew/opt/openblas")
+            set(OPENBLAS_ROOT "/opt/homebrew/opt/openblas")
+        elseif(EXISTS "/usr/local/opt/openblas")
+            set(OPENBLAS_ROOT "/usr/local/opt/openblas")
+        else()
+            message(FATAL_ERROR "OpenBLAS not found. Please install it via 'brew install openblas' or set OPENBLAS_ROOT manually with -DOPENBLAS_ROOT=/path/to/openblas")
+        endif()
+    endif()
+
+    if(OPENBLAS_ROOT)
+        include_directories(${OPENBLAS_ROOT}/include)
+        link_directories(${OPENBLAS_ROOT}/lib)
+    endif()
+endif()
+
 option(LINK_OPENBLAS "Whether OpenBLAS should be linked." ON)
 option(LINK_LAPACK "Whether LAPACK should be linked." ON)
 option(ENABLE_OPENMP "Whether OpenMP should be available from the MolSpin code." ON)
 
 # Compiler options
-set(CMAKE_CXX_STANDARD 17)
-add_compile_options(-O3 -g -Wall -march=native -funroll-loops -fopenmp -DARMA_DONT_PRINT_FAST_MATH_WARNING)
+set(CMAKE_CXX_STANDARD 20)
+add_compile_options(-O3 -g -Wall -march=native -funroll-loops -DARMA_DONT_PRINT_FAST_MATH_WARNING)
+
+# Add OpenMP flags based on compiler
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # GCC uses -fopenmp directly
+    add_compile_options(-fopenmp)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Clang on macOS needs Homebrew's libomp
+    if(APPLE)
+        if(EXISTS "/opt/homebrew/opt/libomp")
+            set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
+        elseif(EXISTS "/usr/local/opt/libomp")
+            set(OpenMP_ROOT "/usr/local/opt/libomp")
+        endif()
+
+        if(OpenMP_ROOT)
+            include_directories(${OpenMP_ROOT}/include)
+            link_directories(${OpenMP_ROOT}/lib)
+            add_compile_options(-Xpreprocessor -fopenmp)
+        endif()
+    endif()
+else()
+	message(FATAL_ERROR "Unknown compiler. Supported are GCC on Linux and Clang on MacOS")
+endif()
 
 # Paths
 set(PATH_SOURCE_SPINAPI "${CMAKE_CURRENT_SOURCE_DIR}/SpinAPI")
@@ -104,6 +147,23 @@ set(SOURCES_RUNSECTION_TASKS
         ${PATH_SOURCE_RUNSECTION}/Tasks/TaskDynamicHSStochYields.cpp
         ${PATH_SOURCE_RUNSECTION}/Tasks/TaskDynamicHSStochTimeEvo.cpp
         ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticSSPowderSpectra.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticSSPump.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskMultiStaticSS.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticHSDirectSpectra.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskActionSpectrumHistogram.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticSSNakajimaZwanzig.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskMultiRadicalPairSSTimeEvo.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskMultiStaticSSTimeEvoSpectra.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticSSNakajimaZwanzigTimeEvo.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticSSSpectraNakajimaZwanzig.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskActionSpectrumHistogramRPOnlyDec.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticHSStochYieldsSymmUncoupled.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticHSDirectYieldsSymmUncoupled.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticHSStochTimeEvoSymmUncoupled.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticHSDirectTimeEvoSymmUncoupled.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskMultiStaticSSNakajimaZwanzigTimeEvo.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskStaticSSRelaxation.cpp
+        ${PATH_SOURCE_RUNSECTION}/Tasks/TaskDynamicHSDirectSpectra.cpp
 )
 
 # --------------------------------------------------------------------------
@@ -134,9 +194,21 @@ add_library(molspin_core STATIC ${SOURCES_SPINAPI} ${SOURCES_MSDPARSER} ${SOURCE
 
 # MolSpin application
 add_executable(molspin ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-target_link_libraries(molspin molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack -fopenmp)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(molspin molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack -fopenmp)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+    target_link_libraries(molspin molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack -lomp)
+else()
+    target_link_libraries(molspintest molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack)
+endif()
 
 # Unit tests
 add_executable(molspintest ${SOURCES_TESTS})
-target_link_libraries(molspintest molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack -fopenmp)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(molspintest molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack -fopenmp)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+    target_link_libraries(molspintest molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack -lomp)
+else()
+    target_link_libraries(molspintest molspin_core ${ARMADILLO_LIBRARIES} -lopenblas -llapack)
+endif()
 
