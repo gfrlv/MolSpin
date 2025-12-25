@@ -72,13 +72,26 @@ int main(int argc, char **argv)
 	for (auto i = cases.cbegin(); i != cases.cend(); i++)
 	{
 		std::cout << "Running test \"" << i->first << "\" ......... " << std::flush;
-		if (i->second())
+		try
 		{
-			std::cout << "PASSED!";
+			if (i->second())
+			{
+				std::cout << "PASSED!";
+			}
+			else
+			{
+				std::cout << "FAILED!";
+				failed_cases.push_back(*i);
+			}
 		}
-		else
+		catch (const std::exception& e)
 		{
-			std::cout << "FAILED!";
+			std::cout << "FAILED (exception: " << e.what() << ")";
+			failed_cases.push_back(*i);
+		}
+		catch (...)
+		{
+			std::cout << "FAILED (unknown exception)";
 			failed_cases.push_back(*i);
 		}
 		std::cout << std::endl;
