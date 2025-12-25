@@ -3,8 +3,22 @@ cmake_minimum_required(VERSION 3.14)
 
 project(MolSpin)
 
+# Set up libomp paths BEFORE finding OpenMP (for macOS with Clang)
+# (otherwise Armadillo won't see it)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+	execute_process(COMMAND brew --prefix libomp
+					OUTPUT_VARIABLE LIBOMP_PREFIX
+					OUTPUT_STRIP_TRAILING_WHITESPACE)
+	set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -I${LIBOMP_PREFIX}/include")
+	set(OpenMP_C_LIB_NAMES "omp")
+	set(OpenMP_CXX_LIB_NAMES "omp")
+	set(OpenMP_omp_LIBRARY "${LIBOMP_PREFIX}/lib/libomp.dylib")
+	include_directories(${LIBOMP_PREFIX}/include)
+	link_directories(${LIBOMP_PREFIX}/lib)
+endif()
+
 # Search for OpenMP
-find_package(OpenMP)
+find_package(OPENMP REQUIRED)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -42,28 +56,6 @@ option(ENABLE_OPENMP "Whether OpenMP should be available from the MolSpin code."
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-O3 -g -Wall -march=native -funroll-loops -DARMA_DONT_PRINT_FAST_MATH_WARNING)
 
-# Add OpenMP flags based on compiler
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    # GCC uses -fopenmp directly
-    add_compile_options(-fopenmp)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Clang on macOS needs Homebrew's libomp
-    if(APPLE)
-        if(EXISTS "/opt/homebrew/opt/libomp")
-            set(OpenMP_ROOT "/opt/homebrew/opt/libomp")
-        elseif(EXISTS "/usr/local/opt/libomp")
-            set(OpenMP_ROOT "/usr/local/opt/libomp")
-        endif()
-
-        if(OpenMP_ROOT)
-            include_directories(${OpenMP_ROOT}/include)
-            link_directories(${OpenMP_ROOT}/lib)
-            add_compile_options(-Xpreprocessor -fopenmp)
-        endif()
-    endif()
-else()
-	message(FATAL_ERROR "Unknown compiler. Supported are GCC on Linux and Clang on MacOS")
-endif()
 
 # Paths
 set(PATH_SOURCE_SPINAPI "${CMAKE_CURRENT_SOURCE_DIR}/SpinAPI")
